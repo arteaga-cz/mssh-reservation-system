@@ -123,12 +123,12 @@ Processes time range configuration form.
 
 ### Utility
 
-#### `set_message(string $message, string $type): void`
+#### `rs_set_message(string $message, string $type): void`
 Sets flash message in session and redirects.
 
 ```php
-set_message('Rezervace byla úspěšně provedena!', 'rs-message-success');
-set_message('Chyba při ukládání.', 'rs-error');
+rs_set_message('Rezervace byla úspěšně provedena!', 'rs-message-success');
+rs_set_message('Chyba při ukládání.', 'rs-error');
 ```
 
 **CSS classes used:**

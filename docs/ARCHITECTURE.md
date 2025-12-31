@@ -68,7 +68,7 @@ rs_handle_reservation_submission()
          └── Insert into {prefix}_reservations
          │
          ▼
-set_message() ──► $_SESSION['flash_message']
+rs_set_message() ──► $_SESSION['flash_message']
          │
          ▼
 Redirect back (JavaScript)
@@ -88,7 +88,7 @@ rs_admin_page()
          └── Handle settings updates (POST)
          │
          ▼
-set_message() ──► $_SESSION['flash_message']
+rs_set_message() ──► $_SESSION['flash_message']
          │
          ▼
 Redirect/refresh

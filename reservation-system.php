@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 ob_start();
 session_start();
 register_activation_hook( __FILE__, 'rs_activate_plugin' );
-tttfunction rs_enqueue_frontend_styles(): void {
+function rs_enqueue_frontend_styles(): void {
 	global $post;
 	if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'reservation_table' ) ) {
 		wp_enqueue_style( 'rs-style', plugin_dir_url( __FILE__ ) . 'assets/style.css', array(), filemtime( plugin_dir_path( __FILE__ ) . 'assets/style.css' ) );
@@ -28,7 +28,7 @@ function rs_enqueue_admin_styles( $hook ): void {
 add_action( 'wp_enqueue_scripts', 'rs_enqueue_frontend_styles' );
 add_action( 'admin_enqueue_scripts', 'rs_enqueue_admin_styles' );
 
-function set_message($message, $type): void
+function rs_set_message($message, $type, $redirect_url = null): void
 {
     if (!session_id()) {
         session_start();
@@ -39,8 +39,12 @@ function set_message($message, $type): void
         'type' => $type
     ];
 
-    $referer = wp_get_referer();
-    wp_safe_redirect( $referer ? $referer : home_url() );
+    if ($redirect_url) {
+        wp_safe_redirect($redirect_url);
+    } else {
+        $referer = wp_get_referer();
+        wp_safe_redirect($referer ? $referer : home_url());
+    }
     exit;
 }
 function rs_get_time_settings(): array {
@@ -185,6 +189,7 @@ function rs_reservation_table_shortcode() {
             </table>
             <form method="POST" action="<?php echo esc_url( $_SERVER['REQUEST_URI'] ); ?>" class="rs-form">
 				<?php wp_nonce_field( 'rs_reservation_action', 'rs_reservation_nonce' ); ?>
+                <input type="hidden" name="rs_redirect_url" value="<?php echo esc_url( get_permalink() ); ?>" />
                 <p class="rs-name">Zarezervujte se</p>
                 <label class="rs-label">
                     <input type="text" autocomplete="Neznámý" name="name" class="rs-input" placeholder="Vaše jméno" required/>
@@ -220,6 +225,11 @@ function rs_handle_reservation_submission(): void {
 			return;
 		}
 
+		// Capture redirect URL from form for proper redirection after processing
+		$redirect_url = isset($_POST['rs_redirect_url'])
+			? esc_url_raw($_POST['rs_redirect_url'])
+			: null;
+
 		$name = sanitize_text_field( $_POST['name'] );
 		$time = sanitize_text_field( $_POST['time'] );
 
@@ -242,7 +252,7 @@ function rs_handle_reservation_submission(): void {
 		) );
 
 		if ( $existing_reservations_count >= $capacity ) {
-            set_message('Kapacita pro tento čas je již plná.', 'rs-error' );
+            rs_set_message('Kapacita pro tento čas je již plná.', 'rs-error', $redirect_url);
 		}
 
 		$existing_reservation = $wpdb->get_var( $wpdb->prepare(
@@ -251,7 +261,7 @@ function rs_handle_reservation_submission(): void {
 		) );
 
 		if ( $existing_reservation > 0 ) {
-            set_message('Rezervace pro toto jméno již existuje! V případě shody jmen napište za jméno dítěte do závorek jméno rodiče! Pokud jste jméno nezadávali vy, tak se obraťte na školku!', 'rs-error');
+            rs_set_message('Rezervace pro toto jméno již existuje! V případě shody jmen napište za jméno dítěte do závorek jméno rodiče! Pokud jste jméno nezadávali vy, tak se obraťte na školku!', 'rs-error', $redirect_url);
 		}
 
 		$insert_result = $wpdb->insert(
@@ -267,9 +277,9 @@ function rs_handle_reservation_submission(): void {
 		);
 
 		if ( $insert_result !== false ) {
-            set_message('Rezervace byla úspěšně provedena!', 'rs-message-success' );
+            rs_set_message('Rezervace byla úspěšně provedena!', 'rs-message-success', $redirect_url);
 		} else {
-			set_message('Chyba při ukládání rezervace.', 'rs-message-error' );
+			rs_set_message('Chyba při ukládání rezervace.', 'rs-message-error', $redirect_url);
 		}
 	}
 }
@@ -303,7 +313,7 @@ function rs_reset_plugin(): void {
 
 	delete_option( 'rs_config' );
 
-	set_message('Plugin byl úspěšně resetován do výchozího nastavení.', 'updated');
+	rs_set_message('Plugin byl úspěšně resetován do výchozího nastavení.', 'updated');
 }
 
 function rs_admin_reset_button(): void {
@@ -332,7 +342,7 @@ function rs_update_time_range_settings(): void {
 		update_option('rs_time_interval', $time_interval);
 
 		rs_activate_plugin();
-        set_message('Časové nastavení bylo úspěšně aktualizováno.', 'updated');
+        rs_set_message('Časové nastavení bylo úspěšně aktualizováno.', 'updated');
     }
 }
 add_action('admin_init', 'rs_update_time_range_settings');
@@ -362,9 +372,9 @@ function rs_admin_page(): void {
 			);
 
 			if ( $updated !== false ) {
-				set_message('Kapacita byla úspěšně změněna.', 'updated');
+				rs_set_message('Kapacita byla úspěšně změněna.', 'updated');
 			} else {
-                set_message('Chyba při aktualizaci kapacity.','error');
+                rs_set_message('Chyba při aktualizaci kapacity.','error');
 			}
 		}
 	}
@@ -381,16 +391,16 @@ function rs_admin_page(): void {
 
 		if ( $reservation_id ) {
 			$wpdb->delete( $table_name, [ 'id' => $reservation_id ], [ '%d' ] );
-            set_message('Rezervace byla úspěšně odstraněna.','updated');
+            rs_set_message('Rezervace byla úspěšně odstraněna.','updated');
 		} else {
-            set_message('Rezervace pro toto jméno neexistuje.','error');
+            rs_set_message('Rezervace pro toto jméno neexistuje.','error');
 		}
 	}
 
 	if ( isset( $_POST['delete_all_reservations_in_time'] ) ) {
 		$time_to_delete = sanitize_text_field( $_POST['delete_time'] );
 		$wpdb->delete( $table_name, [ 'time' => $time_to_delete ], [ '%s' ] );
-		set_message('Všechny rezervace pro tento čas byly úspěšně odstraněny.','updated');
+		rs_set_message('Všechny rezervace pro tento čas byly úspěšně odstraněny.','updated');
 	}
 
     if ( isset( $_POST['delete_all_reservations'] ) ) {
@@ -398,7 +408,7 @@ function rs_admin_page(): void {
         global $wpdb;
         $table_name = $wpdb->prefix . 'reservations';
         $wpdb->query( "DELETE FROM $table_name" );
-        set_message('Všechny rezervace byly úspěšně odstraněny.','updated');
+        rs_set_message('Všechny rezervace byly úspěšně odstraněny.','updated');
     }
 
 	?>
@@ -548,7 +558,7 @@ function rs_update_plugin_settings(): void {
 		$config                         = get_option( 'rs_config' );
 		$config['reservations_enabled'] = isset( $_POST['reservations_enabled'] ) ? (int) $_POST['reservations_enabled'] : 0;
 		update_option( 'rs_config', $config );
-        set_message('Nastavení bylo úspěšně aktualizováno.','updated');
+        rs_set_message('Nastavení bylo úspěšně aktualizováno.','updated');
 	}
 }
 
