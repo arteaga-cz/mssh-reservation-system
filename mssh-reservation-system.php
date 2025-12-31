@@ -11,12 +11,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 ob_start();
 session_start();
 register_activation_hook( __FILE__, 'rs_activate_plugin' );
-function rs_enqueue_styles(): void {
+tttfunction rs_enqueue_frontend_styles(): void {
+	global $post;
+	if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'reservation_table' ) ) {
+		wp_enqueue_style( 'rs-style', plugin_dir_url( __FILE__ ) . 'assets/style.css', array(), filemtime( plugin_dir_path( __FILE__ ) . 'assets/style.css' ) );
+	}
+}
+
+function rs_enqueue_admin_styles( $hook ): void {
+	if ( $hook !== 'toplevel_page_rs-admin' ) {
+		return;
+	}
 	wp_enqueue_style( 'rs-style', plugin_dir_url( __FILE__ ) . 'assets/style.css', array(), filemtime( plugin_dir_path( __FILE__ ) . 'assets/style.css' ) );
 }
 
-add_action( 'wp_enqueue_scripts', 'rs_enqueue_styles' );
-add_action( 'admin_enqueue_scripts', 'rs_enqueue_styles' );
+add_action( 'wp_enqueue_scripts', 'rs_enqueue_frontend_styles' );
+add_action( 'admin_enqueue_scripts', 'rs_enqueue_admin_styles' );
 
 function set_message($message, $type): void
 {
@@ -29,7 +39,8 @@ function set_message($message, $type): void
         'type' => $type
     ];
 
-    echo '<script>window.location.href = "' . $_SERVER['HTTP_REFERER'] . '";</script>';
+    $referer = wp_get_referer();
+    wp_safe_redirect( $referer ? $referer : home_url() );
     exit;
 }
 function rs_get_time_settings(): array {

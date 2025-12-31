@@ -1,48 +1,3 @@
-/* Základní nastavení */
-html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-}
-body {
-    font-family: 'Arial', sans-serif;
-    background-color: #f4f4f4;
-    color: #333;
-    line-height: 1.6;
-}
-
-main {
-    flex: 1;
-}
-
-/* Titulky a texty */
-h1, h2 {
-    font-size: 24px;
-    color: #0066cc;
-    margin-bottom: 20px;
-}
-
-h1 {
-    font-size: 32px;
-}
-
-h2 {
-    font-size: 28px;
-}
-
-header, footer {
-    text-align: center;
-    background-color: #0066cc;
-    color: #fff;
-    padding: 20px 0;
-}
-
-footer {
-    margin-top: auto;
-}
-
 /* Administrativní stránka */
 .rs-admin-container {
     max-width: 1200px;
@@ -280,13 +235,15 @@ footer {
     min-height: 35px;
 }
 
-a {
+.rs-container a,
+.rs-admin-container a {
     color: #0066cc;
     text-decoration: none;
     font-weight: 600;
 }
 
-a:hover {
+.rs-container a:hover,
+.rs-admin-container a:hover {
     text-decoration: underline;
 }
 .rs-user-info-row {
