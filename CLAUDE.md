@@ -32,7 +32,7 @@ feat: tighten profile domain validation
 
 ## Architecture
 
-**Single-file plugin**: All PHP logic resides in `mssh-reservation-system.php`. There is no class-based architecture - the plugin uses procedural WordPress functions.
+**Single-file plugin**: All PHP logic resides in `reservation-system.php`. There is no class-based architecture - the plugin uses procedural WordPress functions.
 
 **Key components:**
 - **Database tables**: Two custom tables (`{prefix}_reservations` and `{prefix}_reservation_slots`) created on activation
@@ -55,7 +55,7 @@ cd lib && composer install
 
 **Test PHP syntax:**
 ```bash
-php -l mssh-reservation-system.php
+php -l reservation-system.php
 ```
 
 ## Key Functions
@@ -89,7 +89,7 @@ php -l mssh-reservation-system.php
 
 ## Files
 
-- `mssh-reservation-system.php` - All plugin logic
+- `reservation-system.php` - All plugin logic
 - `assets/style.css` - Styling for public and admin views
 - `lib/` - Composer dependencies (PhpSpreadsheet for Excel export)
 

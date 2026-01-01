@@ -14,8 +14,8 @@
 ## Project Structure
 
 ```
-mssh-reservation-system/
-├── mssh-reservation-system.php   # Main plugin file (all logic)
+reservation-system/
+├── reservation-system.php   # Main plugin file (all logic)
 ├── assets/
 │   └── style.css                 # Public + admin styling
 ├── lib/

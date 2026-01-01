@@ -2,19 +2,31 @@
 /*
 Plugin Name: Zápisový Rezervační systém
 Description: Plugin pro správu rezervací a zobrazení časových slotů pro uživatele.
-Version: 1.0.1
+Version: 1.2.1
 Author: Jan Veselský
 */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+define( 'RS_VERSION', '1.2.1' );
+
 ob_start();
 session_start();
 register_activation_hook( __FILE__, 'rs_activate_plugin' );
+
 function rs_enqueue_frontend_styles(): void {
 	global $post;
 	if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'reservation_table' ) ) {
-		wp_enqueue_style( 'rs-style', plugin_dir_url( __FILE__ ) . 'assets/style.css', array(), filemtime( plugin_dir_path( __FILE__ ) . 'assets/style.css' ) );
+		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
+		$style_path = 'assets/style' . $suffix . '.css';
+		
+		// Fallback to non-minified if minified doesn't exist
+		if ( ! file_exists( plugin_dir_path( __FILE__ ) . $style_path ) ) {
+			$style_path = 'assets/style.css';
+		}
+
+		wp_enqueue_style( 'rs-style', plugin_dir_url( __FILE__ ) . $style_path, array(), RS_VERSION );
 	}
 }
 
@@ -22,7 +34,15 @@ function rs_enqueue_admin_styles( $hook ): void {
 	if ( $hook !== 'toplevel_page_rs-admin' ) {
 		return;
 	}
-	wp_enqueue_style( 'rs-style', plugin_dir_url( __FILE__ ) . 'assets/style.css', array(), filemtime( plugin_dir_path( __FILE__ ) . 'assets/style.css' ) );
+	
+	$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
+	$style_path = 'assets/style' . $suffix . '.css';
+	
+	if ( ! file_exists( plugin_dir_path( __FILE__ ) . $style_path ) ) {
+		$style_path = 'assets/style.css';
+	}
+
+	wp_enqueue_style( 'rs-style', plugin_dir_url( __FILE__ ) . $style_path, array(), RS_VERSION );
 }
 
 add_action( 'wp_enqueue_scripts', 'rs_enqueue_frontend_styles' );

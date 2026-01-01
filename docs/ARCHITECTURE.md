@@ -2,7 +2,7 @@
 
 ## Overview
 
-Single-file procedural WordPress plugin. All logic resides in `mssh-reservation-system.php` using WordPress APIs and conventions.
+Single-file procedural WordPress plugin. All logic resides in `reservation-system.php` using WordPress APIs and conventions.
 
 ## Component Diagram
 
@@ -14,7 +14,7 @@ Single-file procedural WordPress plugin. All logic resides in `mssh-reservation-
 └────────┬─────────┴───────┬────────┴───────┬───────┴──────┬──────┘
          │                 │                │              │
 ┌────────▼─────────────────▼────────────────▼──────────────▼──────┐
-│                   mssh-reservation-system.php                    │
+│                   reservation-system.php                    │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
 │  │  Shortcode  │  │   Admin     │  │      Data Layer         │  │
@@ -142,7 +142,7 @@ See [DATABASE.md](./DATABASE.md) for table schemas.
 ## File Dependencies
 
 ```
-mssh-reservation-system.php
+reservation-system.php
          │
          ├── assets/style.css (enqueued via wp_enqueue_style)
          │
