@@ -2,7 +2,7 @@
 /*
 Plugin Name: Zápisový Rezervační systém
 Description: Plugin pro správu rezervací a zobrazení časových slotů pro uživatele.
-Version: 1.0
+Version: 1.0.1
 Author: Jan Veselský
 */
 if ( ! defined( 'ABSPATH' ) ) {
