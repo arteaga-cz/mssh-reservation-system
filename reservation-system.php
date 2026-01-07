@@ -152,7 +152,7 @@ function rs_get_config() {
 }
 
 function rs_reservation_table_shortcode() {
-	$data   = rs_load_data();
+	$data   = rs_load_public_data();
 	$times  = rs_generate_times();
 	$config = rs_get_config();
 
@@ -176,35 +176,33 @@ function rs_reservation_table_shortcode() {
             <table class="rs-table">
                 <thead>
                 <tr>
-                    <th class="rs-user-info-row">Čas</th>
-                    <th class="rs-user-info-row">Rezervace</th>
-                    <th>Jména</th>
+                    <th>Čas</th>
+                    <th>Volná místa</th>
                 </tr>
                 </thead>
                 <tbody>
-				<?php foreach ( $times as $time ) :
-					$reservations = $data[ $time ]['reservations'] ?? [];
+				<?php
+				$has_available_slots = false;
+				foreach ( $times as $time ) :
+					$count = $data[ $time ]['count'] ?? 0;
 					$capacity = $data[ $time ]['capacity'] ?? 6;
-                    usort($reservations, function($a, $b) {
-                        return strcmp($a['name'], $b['name']);
-                    });
+
+					// Skip fully booked slots
+					if ( $count >= $capacity ) {
+						continue;
+					}
+					$has_available_slots = true;
 					?>
                     <tr>
                         <td><?php echo esc_html( $time ); ?></td>
-                        <td><?php echo count( $reservations ) . '/' . esc_html( $capacity ); ?></td>
-                        <td>
-							<?php if ( ! empty( $reservations ) ) : ?>
-                                <ul class="rs-names-list">
-									<?php foreach ( $reservations as $res ) : ?>
-                                        <li class="rs-name"><?php echo esc_html( $res['name'] ); ?></li>
-									<?php endforeach; ?>
-                                </ul>
-							<?php else : ?>
-                                <p class="rs-no-reservations">Žádné rezervace</p>
-							<?php endif; ?>
-                        </td>
+                        <td><?php echo esc_html( rs_format_available_spots( $capacity - $count ) ); ?></td>
                     </tr>
 				<?php endforeach; ?>
+				<?php if ( ! $has_available_slots ) : ?>
+                    <tr>
+                        <td colspan="2" class="rs-no-slots">Všechny termíny jsou obsazeny</td>
+                    </tr>
+				<?php endif; ?>
                 </tbody>
             </table>
             <form method="POST" action="<?php echo esc_url( $_SERVER['REQUEST_URI'] ); ?>" class="rs-form">
@@ -218,10 +216,9 @@ function rs_reservation_table_shortcode() {
                     <select name="time" class="rs-select" required>
                         <?php
                         foreach ( $times as $time ) :
-                            $reservations = $data[ $time ]['reservations'] ?? [];
+                            $count = $data[ $time ]['count'] ?? 0;
                             $capacity = $data[ $time ]['capacity'] ?? 6;
-                            $existing_reservations_count = count( $reservations );
-                            if ( $existing_reservations_count >= $capacity ) {
+                            if ( $count >= $capacity ) {
                                 continue;
                             }
                             ?>
@@ -603,6 +600,48 @@ function rs_load_data(): array {
 	}
 
 	return $data;
+}
+
+/**
+ * Load reservation data for public display (counts only, no names).
+ * Used by the public shortcode to avoid exposing personal information.
+ */
+function rs_load_public_data(): array {
+	global $wpdb;
+	$table_name     = $wpdb->prefix . 'reservations';
+	$capacity_table = $wpdb->prefix . 'reservation_slots';
+
+	// Get reservation counts per time (no names for privacy)
+	$results = $wpdb->get_results(
+		"SELECT time, COUNT(*) as count FROM $table_name GROUP BY time",
+		ARRAY_A
+	);
+
+	$data = array();
+	foreach ( $results as $row ) {
+		$data[ $row['time'] ]['count'] = (int) $row['count'];
+	}
+
+	// Get all time slot capacities
+	$slots = $wpdb->get_results( "SELECT time, capacity FROM $capacity_table", ARRAY_A );
+	foreach ( $slots as $slot ) {
+		$data[ $slot['time'] ]['capacity'] = (int) $slot['capacity'];
+	}
+
+	return $data;
+}
+
+/**
+ * Format available spots count with proper Czech grammar.
+ */
+function rs_format_available_spots( int $count ): string {
+	if ( $count === 1 ) {
+		return '1 volné místo';
+	} elseif ( $count >= 2 && $count <= 4 ) {
+		return $count . ' volná místa';
+	} else {
+		return $count . ' volných míst';
+	}
 }
 
 function rs_generate_times(): array {

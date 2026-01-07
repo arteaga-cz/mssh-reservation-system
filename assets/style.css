@@ -137,9 +137,15 @@
   font-size: 28px;
 }
 
-.rs-table {
-  width: 100%;
+/* Public table - narrow width */
+.rs-container .rs-table {
+  width: 300px;
   margin: 30px auto;
+}
+
+.rs-container .rs-table th:first-child,
+.rs-container .rs-table td:first-child {
+  width: 50%;
 }
 
 .rs-names-list {
@@ -173,6 +179,13 @@
   margin: 0;
   color: #777;
   font-size: 20px;
+}
+
+.rs-no-slots {
+  text-align: center;
+  color: #777;
+  font-style: italic;
+  padding: 20px;
 }
 
 .rs-error {
