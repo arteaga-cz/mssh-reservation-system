@@ -1,0 +1,140 @@
+// ==========================================================================
+// Frontend Styles - Public Reservation Form
+// ==========================================================================
+
+@use 'common';
+@use 'variables' as *;
+
+// Container
+.rs-container {
+  display: flex;
+  flex-direction: column;
+  max-width: 98%;
+  margin: 0 auto;
+  padding: $spacing-lg;
+  align-items: center;
+}
+
+// Title
+.rs-title {
+  text-align: center;
+  color: $color-primary;
+  font-size: $font-size-title;
+}
+
+// Public Table - Narrow Width
+.rs-container .rs-table {
+  width: $public-table-width;
+  margin: $spacing-xl auto;
+}
+
+.rs-container .rs-table th:first-child,
+.rs-container .rs-table td:first-child {
+  width: 50%;
+}
+
+// Reservation Form
+.rs-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: $spacing-lg;
+  background-color: $color-bg-white;
+  padding: $spacing-lg;
+  border-radius: $border-radius-xl;
+  box-shadow: $box-shadow;
+  width: $form-width;
+  align-items: center;
+}
+
+// Form Inputs
+.rs-input,
+.rs-select {
+  padding: $spacing-md;
+  font-size: $font-size-base;
+  border: 1px solid $color-border;
+  border-radius: $border-radius;
+  background-color: $color-bg-white;
+  color: $color-text;
+  transition: $transition-base;
+  width: $input-width;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: $color-primary;
+    outline: none;
+  }
+}
+
+.rs-input {
+  margin-bottom: $spacing-sm;
+}
+
+.rs-select {
+  margin-bottom: $spacing-lg;
+}
+
+// Reserve Button
+.rs-reserve-button {
+  width: $input-width;
+  padding: $spacing-md;
+  background-color: $color-primary;
+  color: $color-bg-white;
+  font-size: $font-size-base;
+  cursor: pointer;
+  border: none;
+  border-radius: $border-radius;
+  box-sizing: border-box;
+  transition: background-color $transition-base;
+
+  &:hover {
+    background-color: $color-primary-dark;
+  }
+}
+
+// Messages
+.rs-message-success {
+  color: $color-success;
+  font-size: $font-size-base;
+  font-weight: bold;
+  margin-top: $spacing-lg;
+}
+
+.rs-error {
+  text-align: center;
+  color: $color-error;
+  font-size: $font-size-lg;
+  margin-top: $spacing-lg;
+}
+
+// Empty State
+.rs-no-slots {
+  text-align: center;
+  color: $color-text-muted;
+  font-style: italic;
+  padding: $spacing-lg;
+}
+
+// Mobile Responsive
+@media (max-width: $breakpoint-mobile) {
+  .rs-form {
+    width: $form-width-mobile;
+  }
+
+  .rs-table,
+  th,
+  td {
+    font-size: $font-size-sm;
+  }
+
+  .rs-input,
+  .rs-select,
+  .rs-reserve-button {
+    font-size: $font-size-sm;
+    padding: $spacing-sm;
+  }
+
+  .rs-name {
+    font-size: 10px;
+  }
+}

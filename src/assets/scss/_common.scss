@@ -1,0 +1,70 @@
+// ==========================================================================
+// Common - Shared Styles for Frontend and Admin
+// ==========================================================================
+
+@use 'variables' as *;
+
+// Table Base Styles
+.rs-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: $color-bg-white;
+  border-radius: $border-radius-lg;
+  box-shadow: $box-shadow;
+  margin-top: $spacing-lg;
+}
+
+.rs-table th,
+.rs-table td {
+  padding: $spacing-md;
+  text-align: center;
+  border: 1px solid $color-border;
+}
+
+.rs-table th {
+  background-color: $color-primary;
+  color: $color-bg-white;
+  font-weight: bold;
+}
+
+.rs-table td {
+  background-color: $color-bg-light;
+}
+
+.rs-table tr:nth-child(even) td {
+  background-color: $color-bg-alt;
+}
+
+.rs-table tr:hover td {
+  background-color: $color-bg-hover;
+}
+
+// Shared Form Elements
+.rs-label {
+  display: block;
+  width: $input-width;
+
+  input,
+  select {
+    display: block;
+    width: 100%;
+  }
+}
+
+.rs-name {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+}
+
+// Shared Link Styles
+.rs-container a,
+.rs-admin-container a {
+  color: $color-primary;
+  text-decoration: none;
+  font-weight: 600;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

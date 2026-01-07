@@ -19,14 +19,14 @@ function rs_enqueue_frontend_styles(): void {
 	global $post;
 	if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'reservation_table' ) ) {
 		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
-		$style_path = 'assets/css/style' . $suffix . '.css';
+		$style_path = 'assets/css/frontend' . $suffix . '.css';
 
 		// Fallback to non-minified if minified doesn't exist
 		if ( ! file_exists( plugin_dir_path( __FILE__ ) . $style_path ) ) {
-			$style_path = 'assets/css/style.css';
+			$style_path = 'assets/css/frontend.css';
 		}
 
-		wp_enqueue_style( 'rs-style', plugin_dir_url( __FILE__ ) . $style_path, array(), RS_VERSION );
+		wp_enqueue_style( 'rs-frontend-style', plugin_dir_url( __FILE__ ) . $style_path, array(), RS_VERSION );
 	}
 }
 
@@ -34,15 +34,15 @@ function rs_enqueue_admin_styles( $hook ): void {
 	if ( $hook !== 'toplevel_page_rs-admin' ) {
 		return;
 	}
-	
+
 	$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
-	$style_path = 'assets/css/style' . $suffix . '.css';
+	$style_path = 'assets/css/admin' . $suffix . '.css';
 
 	if ( ! file_exists( plugin_dir_path( __FILE__ ) . $style_path ) ) {
-		$style_path = 'assets/css/style.css';
+		$style_path = 'assets/css/admin.css';
 	}
 
-	wp_enqueue_style( 'rs-style', plugin_dir_url( __FILE__ ) . $style_path, array(), RS_VERSION );
+	wp_enqueue_style( 'rs-admin-style', plugin_dir_url( __FILE__ ) . $style_path, array(), RS_VERSION );
 }
 
 add_action( 'wp_enqueue_scripts', 'rs_enqueue_frontend_styles' );

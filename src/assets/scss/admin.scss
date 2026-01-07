@@ -1,0 +1,144 @@
+// ==========================================================================
+// Admin Styles - WordPress Admin Panel
+// ==========================================================================
+
+@use 'common';
+@use 'variables' as *;
+
+// Admin Container
+.rs-admin-container {
+  max-width: $admin-max-width;
+  margin: 0 auto;
+  padding: $spacing-lg;
+
+  h1 {
+    color: $color-primary;
+    font-size: $font-size-admin-title;
+  }
+}
+
+// Table Column Widths
+.time-row {
+  width: 40px;
+}
+
+// Delete Buttons
+.btn-delete {
+  background-color: $color-error;
+  color: $color-bg-white;
+  font-size: $font-size-sm;
+  padding: 3px 30px;
+  border: none;
+  border-radius: $border-radius;
+  cursor: pointer;
+  transition: background-color $transition-base, transform 0.2s;
+  margin: 0;
+
+  &:hover {
+    background-color: $color-error-dark;
+    transform: scale(1.05);
+  }
+}
+
+.big-btn-delete {
+  width: 100%;
+  font-weight: 600;
+  max-height: 50%;
+}
+
+// Names List (Admin)
+.rs-names-list-admin {
+  display: flex;
+  flex-direction: column;
+  padding-left: 0;
+  margin: 0;
+  font-size: $font-size-lg;
+  gap: $spacing-xs;
+}
+
+// Capacity Controls
+.rs-capacity-button {
+  width: 33%;
+  padding: $spacing-md;
+  background-color: $color-primary;
+  color: $color-bg-white;
+  cursor: pointer;
+  border: none;
+  border-radius: $border-radius;
+
+  &:hover {
+    background-color: $color-primary-dark;
+  }
+}
+
+.rs-capacity-input {
+  width: 67%;
+  border-radius: $border-radius;
+  height: 100%;
+}
+
+// Action Forms
+.rs-action-capacity {
+  display: flex;
+  flex-direction: row;
+  gap: $spacing-xs;
+  justify-content: center;
+  max-height: 50%;
+  font-size: $font-size-base;
+  margin: 0;
+}
+
+.rs-action-delete-all {
+  display: flex;
+  max-height: 50%;
+  min-height: 35px;
+}
+
+// Excel Export
+.rs-excel-label {
+  display: flex;
+  flex-direction: row;
+  gap: $spacing-lg;
+}
+
+// Date Controls
+.rs-date {
+  width: 60%;
+}
+
+.rs-date-div {
+  display: flex;
+  flex-direction: row;
+  width: 28%;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// Button Layout
+.buttons-gap {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+// Tablet Responsive
+@media (max-width: $breakpoint-tablet) {
+  .rs-action-capacity {
+    font-size: $font-size-xs;
+  }
+
+  .rs-delete {
+    width: 50%;
+  }
+
+  .rs-capacity-button {
+    width: 50%;
+  }
+}
+
+// Mobile Responsive
+@media (max-width: $breakpoint-mobile) {
+  .btn-delete {
+    font-size: $font-size-xs;
+  }
+}
