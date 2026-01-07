@@ -2,31 +2,37 @@
 /*
 Plugin Name: Zápisový Rezervační systém
 Description: Plugin pro správu rezervací a zobrazení časových slotů pro uživatele.
-Version: 1.2.1
+Version: 1.3.0
 Author: Jan Veselský
 */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'RS_VERSION', '1.2.1' );
+define( 'RS_VERSION', '1.3.0' );
 
 ob_start();
 session_start();
 register_activation_hook( __FILE__, 'rs_activate_plugin' );
 
-function rs_enqueue_frontend_styles(): void {
+function rs_enqueue_frontend_assets(): void {
 	global $post;
 	if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'reservation_table' ) ) {
 		$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
-		$style_path = 'assets/css/frontend' . $suffix . '.css';
 
-		// Fallback to non-minified if minified doesn't exist
+		// Enqueue CSS
+		$style_path = 'assets/css/frontend' . $suffix . '.css';
 		if ( ! file_exists( plugin_dir_path( __FILE__ ) . $style_path ) ) {
 			$style_path = 'assets/css/frontend.css';
 		}
-
 		wp_enqueue_style( 'rs-frontend-style', plugin_dir_url( __FILE__ ) . $style_path, array(), RS_VERSION );
+
+		// Enqueue JS for lightbox
+		$script_path = 'assets/js/frontend' . $suffix . '.js';
+		if ( ! file_exists( plugin_dir_path( __FILE__ ) . $script_path ) ) {
+			$script_path = 'assets/js/frontend.js';
+		}
+		wp_enqueue_script( 'rs-frontend-script', plugin_dir_url( __FILE__ ) . $script_path, array(), RS_VERSION, true );
 	}
 }
 
@@ -45,7 +51,7 @@ function rs_enqueue_admin_styles( $hook ): void {
 	wp_enqueue_style( 'rs-admin-style', plugin_dir_url( __FILE__ ) . $style_path, array(), RS_VERSION );
 }
 
-add_action( 'wp_enqueue_scripts', 'rs_enqueue_frontend_styles' );
+add_action( 'wp_enqueue_scripts', 'rs_enqueue_frontend_assets' );
 add_action( 'admin_enqueue_scripts', 'rs_enqueue_admin_styles' );
 
 function rs_set_message($message, $type, $redirect_url = null): void
@@ -159,13 +165,13 @@ function rs_reservation_table_shortcode() {
 	ob_start();
 	?>
     <div class="rs-container">
-        <h1 class="rs-title">Rezervační Tabulka</h1>
 		<?php
         if (!empty($_SESSION['flash_message'])) {
             $message = $_SESSION['flash_message']['text'];
             $type = $_SESSION['flash_message']['type'];
 
-            echo '<div class="' . esc_attr($type) . '">' . esc_html($message) . '</div>';
+            // WCAG 4.1.3: Status messages announced to screen readers via live region
+            echo '<div role="status" aria-live="polite" class="' . esc_attr($type) . '">' . esc_html($message) . '</div>';
 
             unset($_SESSION['flash_message']);
         }
@@ -174,10 +180,13 @@ function rs_reservation_table_shortcode() {
             <p class="rs-error">Rezervace jsou momentálně uzavřeny.</p>
 		<?php else : ?>
             <table class="rs-table">
+                <!-- WCAG 1.3.1: Caption describes table purpose for screen readers -->
+                <caption class="sr-only">Dostupné časové termíny pro rezervaci</caption>
                 <thead>
                 <tr>
-                    <th>Čas</th>
-                    <th>Volná místa</th>
+                    <th scope="col">Čas</th>
+                    <th scope="col">Volná místa</th>
+                    <th scope="col"><span class="sr-only">Akce</span></th>
                 </tr>
                 </thead>
                 <tbody>
@@ -196,38 +205,47 @@ function rs_reservation_table_shortcode() {
                     <tr>
                         <td><?php echo esc_html( $time ); ?></td>
                         <td><?php echo esc_html( rs_format_available_spots( $capacity - $count ) ); ?></td>
+                        <td>
+                            <button type="button" class="rs-reserve-button rs-open-lightbox" data-time="<?php echo esc_attr( $time ); ?>">
+                                Rezervovat
+                            </button>
+                        </td>
                     </tr>
 				<?php endforeach; ?>
 				<?php if ( ! $has_available_slots ) : ?>
                     <tr>
-                        <td colspan="2" class="rs-no-slots">Všechny termíny jsou obsazeny</td>
+                        <td colspan="3" class="rs-no-slots">Všechny termíny jsou obsazeny</td>
                     </tr>
 				<?php endif; ?>
                 </tbody>
             </table>
-            <form method="POST" action="<?php echo esc_url( $_SERVER['REQUEST_URI'] ); ?>" class="rs-form">
-				<?php wp_nonce_field( 'rs_reservation_action', 'rs_reservation_nonce' ); ?>
-                <input type="hidden" name="rs_redirect_url" value="<?php echo esc_url( get_permalink() ); ?>" />
-                <p class="rs-name">Zarezervujte se</p>
-                <label class="rs-label">
-                    <input type="text" autocomplete="Neznámý" name="name" class="rs-input" placeholder="Vaše jméno" required/>
-                </label>
-                <label class="rs-label">
-                    <select name="time" class="rs-select" required>
-                        <?php
-                        foreach ( $times as $time ) :
-                            $count = $data[ $time ]['count'] ?? 0;
-                            $capacity = $data[ $time ]['capacity'] ?? 6;
-                            if ( $count >= $capacity ) {
-                                continue;
-                            }
-                            ?>
-                            <option value="<?php echo esc_attr( $time ); ?>"><?php echo esc_html( $time ); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <button type="submit" name="submit_reservation" class="rs-reserve-button">Rezervovat</button>
-            </form>
+
+            <!-- Lightbox Overlay -->
+            <div class="rs-lightbox-overlay" role="dialog" aria-modal="true" aria-labelledby="rs-lightbox-title">
+                <div class="rs-lightbox">
+                    <button type="button" class="rs-lightbox-close" aria-label="Zavřít">
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                    <h3 id="rs-lightbox-title" class="rs-lightbox-title">Rezervace na <span class="rs-lightbox-time"></span></h3>
+                    <form method="POST" action="<?php echo esc_url( $_SERVER['REQUEST_URI'] ); ?>" class="rs-lightbox-form">
+                        <?php wp_nonce_field( 'rs_reservation_action', 'rs_reservation_nonce' ); ?>
+                        <input type="hidden" name="rs_redirect_url" value="<?php echo esc_url( get_permalink() ); ?>" />
+                        <input type="hidden" name="time" class="rs-lightbox-time-input" value="" />
+                        <!-- WCAG 1.3.1, 2.4.6: Explicit label association with visible label -->
+                        <label for="rs-reservation-name" class="rs-label">
+                            <span class="rs-label-text sr-only">Jméno a příjmení dítěte</span>
+                            <input type="text" id="rs-reservation-name" name="name" class="rs-input" placeholder="Jméno a příjmení dítěte" required aria-required="true"/>
+                        </label>
+                        <div class="rs-lightbox-buttons">
+                            <button type="button" class="rs-lightbox-cancel">Zrušit</button>
+                            <button type="submit" name="submit_reservation" class="rs-reserve-button">Rezervovat</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
 		<?php endif; ?>
     </div>
 	<?php
@@ -278,7 +296,7 @@ function rs_handle_reservation_submission(): void {
 		) );
 
 		if ( $existing_reservation > 0 ) {
-            rs_set_message('Rezervace pro toto jméno již existuje! V případě shody jmen napište za jméno dítěte do závorek jméno rodiče! Pokud jste jméno nezadávali vy, tak se obraťte na školku!', 'rs-error', $redirect_url);
+            rs_set_message('Rezervace pro toto jméno již existuje. V případě shody jmen napište za jméno dítěte do závorek jméno rodiče. Pokud jste jméno nezadávali vy, obraťte se na školku.', 'rs-error', $redirect_url);
 		}
 
 		$insert_result = $wpdb->insert(
@@ -330,15 +348,13 @@ function rs_reset_plugin(): void {
 
 	delete_option( 'rs_config' );
 
-	rs_set_message('Plugin byl úspěšně resetován do výchozího nastavení.', 'updated');
+	rs_set_message('Plugin byl úspěšně resetován do výchozího nastavení.', 'updated', admin_url( 'admin.php?page=rs-admin' ));
 }
 
 function rs_admin_reset_button(): void {
-	if ( isset( $_POST['reset_plugin'] ) ) {
-		rs_reset_plugin();
-	}
 	?>
     <form method="POST">
+        <?php wp_nonce_field( 'rs_reset_plugin_action', 'rs_reset_plugin_nonce' ); ?>
         <button type="submit" name="reset_plugin" class="button button-secondary"
                 onclick="return confirm('Opravdu chcete resetovat plugin? Všechna data budou smazána!');">Resetovat do
             výchozího nastavení
@@ -348,6 +364,9 @@ function rs_admin_reset_button(): void {
 }
 
 function rs_update_time_range_settings(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
 	if (isset($_POST['update_time_range']) && isset($_POST['rs_update_time_range_nonce']) && wp_verify_nonce($_POST['rs_update_time_range_nonce'], 'rs_update_time_range_action')) {
 
         $start_time = sanitize_text_field($_POST['start_time']);
@@ -359,26 +378,25 @@ function rs_update_time_range_settings(): void {
 		update_option('rs_time_interval', $time_interval);
 
 		rs_activate_plugin();
-        rs_set_message('Časové nastavení bylo úspěšně aktualizováno.', 'updated');
+        rs_set_message('Časové nastavení bylo úspěšně aktualizováno.', 'updated', admin_url( 'admin.php?page=rs-admin' ));
     }
 }
 add_action('admin_init', 'rs_update_time_range_settings');
 
-
-function rs_admin_page(): void {
+function rs_update_capacity_handler(): void {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return;
 	}
-	global $wpdb;
-	$table_name     = $wpdb->prefix . 'reservations';
-	$capacity_table = $wpdb->prefix . 'reservation_slots';
-	$data           = rs_load_data();
-	$times          = rs_generate_times();
+	if ( isset( $_POST['update_capacity'] )
+	     && isset( $_POST['rs_update_capacity_nonce'] )
+	     && wp_verify_nonce( $_POST['rs_update_capacity_nonce'], 'rs_update_capacity_action' ) ) {
 
-	if ( isset( $_POST['update_capacity'] ) ) {
+		global $wpdb;
+		$capacity_table = $wpdb->prefix . 'reservation_slots';
 		$time     = sanitize_text_field( $_POST['time'] );
 		$capacity = intval( $_POST['capacity'] );
 
+		$admin_url = admin_url( 'admin.php?page=rs-admin' );
 		if ( $capacity > 0 ) {
 			$updated = $wpdb->update(
 				$capacity_table,
@@ -389,44 +407,96 @@ function rs_admin_page(): void {
 			);
 
 			if ( $updated !== false ) {
-				rs_set_message('Kapacita byla úspěšně změněna.', 'updated');
+				rs_set_message( 'Kapacita byla úspěšně změněna.', 'updated', $admin_url );
 			} else {
-                rs_set_message('Chyba při aktualizaci kapacity.','error');
+				rs_set_message( 'Chyba při aktualizaci kapacity.', 'error', $admin_url );
 			}
 		}
 	}
+}
+add_action( 'admin_init', 'rs_update_capacity_handler' );
 
+function rs_delete_reservation_handler(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	if ( isset( $_POST['delete_reservation'] )
+	     && isset( $_POST['rs_delete_reservation_nonce'] )
+	     && wp_verify_nonce( $_POST['rs_delete_reservation_nonce'], 'rs_delete_reservation_action' ) ) {
 
-	if ( isset( $_POST['delete_reservation'] ) ) {
-		$name = sanitize_text_field( $_POST['delete_reservation'] );
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'reservations';
+		$name = sanitize_text_field( $_POST['delete_reservation'] );
 
 		$reservation_id = $wpdb->get_var( $wpdb->prepare(
 			"SELECT id FROM $table_name WHERE name = %s LIMIT 1", $name
 		) );
 
+		$admin_url = admin_url( 'admin.php?page=rs-admin' );
 		if ( $reservation_id ) {
 			$wpdb->delete( $table_name, [ 'id' => $reservation_id ], [ '%d' ] );
-            rs_set_message('Rezervace byla úspěšně odstraněna.','updated');
+			rs_set_message( 'Rezervace byla úspěšně odstraněna.', 'updated', $admin_url );
 		} else {
-            rs_set_message('Rezervace pro toto jméno neexistuje.','error');
+			rs_set_message( 'Rezervace pro toto jméno neexistuje.', 'error', $admin_url );
 		}
 	}
+}
+add_action( 'admin_init', 'rs_delete_reservation_handler' );
 
-	if ( isset( $_POST['delete_all_reservations_in_time'] ) ) {
+function rs_delete_all_reservations_in_time_handler(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	if ( isset( $_POST['delete_all_reservations_in_time'] )
+	     && isset( $_POST['rs_delete_all_in_time_nonce'] )
+	     && wp_verify_nonce( $_POST['rs_delete_all_in_time_nonce'], 'rs_delete_all_in_time_action' ) ) {
+
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'reservations';
 		$time_to_delete = sanitize_text_field( $_POST['delete_time'] );
 		$wpdb->delete( $table_name, [ 'time' => $time_to_delete ], [ '%s' ] );
-		rs_set_message('Všechny rezervace pro tento čas byly úspěšně odstraněny.','updated');
+		rs_set_message( 'Všechny rezervace pro tento čas byly úspěšně odstraněny.', 'updated', admin_url( 'admin.php?page=rs-admin' ) );
 	}
+}
+add_action( 'admin_init', 'rs_delete_all_reservations_in_time_handler' );
 
-    if ( isset( $_POST['delete_all_reservations'] ) ) {
+function rs_delete_all_reservations_handler(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	if ( isset( $_POST['delete_all_reservations'] )
+	     && isset( $_POST['delete_all_reservations_nonce'] )
+	     && wp_verify_nonce( $_POST['delete_all_reservations_nonce'], 'delete_all_reservations_action' ) ) {
 
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'reservations';
-        $wpdb->query( "DELETE FROM $table_name" );
-        rs_set_message('Všechny rezervace byly úspěšně odstraněny.','updated');
-    }
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'reservations';
+		$wpdb->query( "DELETE FROM $table_name" );
+		rs_set_message( 'Všechny rezervace byly úspěšně odstraněny.', 'updated', admin_url( 'admin.php?page=rs-admin' ) );
+	}
+}
+add_action( 'admin_init', 'rs_delete_all_reservations_handler' );
+
+function rs_reset_plugin_handler(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	if ( isset( $_POST['reset_plugin'] )
+	     && isset( $_POST['rs_reset_plugin_nonce'] )
+	     && wp_verify_nonce( $_POST['rs_reset_plugin_nonce'], 'rs_reset_plugin_action' ) ) {
+		rs_reset_plugin();
+	}
+}
+add_action( 'admin_init', 'rs_reset_plugin_handler' );
+
+function rs_admin_page(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	global $wpdb;
+	$table_name     = $wpdb->prefix . 'reservations';
+	$capacity_table = $wpdb->prefix . 'reservation_slots';
+	$data           = rs_load_data();
+	$times          = rs_generate_times();
 
 	?>
     <div class="wrap rs-admin-container">
@@ -526,6 +596,7 @@ function rs_admin_page(): void {
 								<?php foreach ( $reservations as $res ) : ?>
                                     <li class="rs-name"> <?php echo esc_html( $res['name'] ); ?>
                                         <form method="POST" action="">
+                                            <?php wp_nonce_field( 'rs_delete_reservation_action', 'rs_delete_reservation_nonce' ); ?>
                                             <input type="hidden" name="delete_reservation"
                                                    value="<?php echo esc_attr( $res['name'] ); ?>">
                                             <button type="submit" class="btn-delete"
@@ -543,6 +614,7 @@ function rs_admin_page(): void {
                     <td>
                         <div class="rs-names-list-admin">
                             <form method="POST" class="rs-action-capacity" action="">
+                                <?php wp_nonce_field( 'rs_update_capacity_action', 'rs_update_capacity_nonce' ); ?>
                                 <input type="hidden" name="time" value="<?php echo esc_attr( $time ); ?>"/>
                                 <label name="capacity" class="rs-label">
                                     <input type="number" name="capacity" value="<?php echo esc_attr( $capacity ); ?>"
@@ -553,6 +625,7 @@ function rs_admin_page(): void {
                                 </button>
                             </form>
                             <form method="POST" class="rs-action-delete-all" action="">
+                                <?php wp_nonce_field( 'rs_delete_all_in_time_action', 'rs_delete_all_in_time_nonce' ); ?>
                                 <input type="hidden" name="delete_time" value="<?php echo esc_attr( $time ); ?>"/>
                                 <button type="submit" name="delete_all_reservations_in_time" class="btn-delete big-btn-delete"
                                         onclick="return confirm('Opravdu chcete smazat všechny rezervace pro tento čas?');">
@@ -571,11 +644,14 @@ function rs_admin_page(): void {
 
 
 function rs_update_plugin_settings(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
 	if ( isset( $_POST['update_config'] ) && isset( $_POST['rs_update_settings_nonce'] ) && wp_verify_nonce( $_POST['rs_update_settings_nonce'], 'rs_update_settings_action' ) ) {
 		$config                         = get_option( 'rs_config' );
 		$config['reservations_enabled'] = isset( $_POST['reservations_enabled'] ) ? (int) $_POST['reservations_enabled'] : 0;
 		update_option( 'rs_config', $config );
-        rs_set_message('Nastavení bylo úspěšně aktualizováno.','updated');
+        rs_set_message('Nastavení bylo úspěšně aktualizováno.', 'updated', admin_url( 'admin.php?page=rs-admin' ));
 	}
 }
 
@@ -737,7 +813,7 @@ function rs_export_reservations_to_excel(): void {
 
 		$sheet->setCellValue('A3', 'Čas');
 		$sheet->setCellValue('B3', 'Ev. č.');
-		$sheet->setCellValue('C3', 'Jméno dítěte');
+		$sheet->setCellValue('C3', 'Jméno a příjmení dítěte');
 		$sheet->setCellValue('D3', 'Poznámka');
 
 		$row = 4;
@@ -787,7 +863,7 @@ function rs_export_reservations_to_excel(): void {
                     $sheet->setCellValue('A' . $title, 'Elektronická rezervace času na '.$formattedDate);
                     $sheet->setCellValue('A' . ($row - 1), 'Čas');
                     $sheet->setCellValue('B' . ($row - 1), 'Ev. č.');
-                    $sheet->setCellValue('C' . ($row - 1), 'Jméno dítěte');
+                    $sheet->setCellValue('C' . ($row - 1), 'Jméno a příjmení dítěte');
                     $sheet->setCellValue('D' . ($row - 1), 'Poznámka');
                     $count = 0 + $wpdb->get_var( $wpdb->prepare( "
                 SELECT COUNT(*) 

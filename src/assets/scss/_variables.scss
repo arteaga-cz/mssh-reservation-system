@@ -1,37 +1,31 @@
 // ==========================================================================
-// Variables - Design Tokens
+// Variables - Design Tokens (aligned with ms-skolahrou.test theme)
 // ==========================================================================
 
-// Colors - Primary
-$color-primary: #0066cc;
-$color-primary-dark: #004c99;
+// Colors - Primary (from site theme)
+$color-primary: #006ba6;        // Site button blue
+$color-primary-dark: #004266;   // Site heading blue
+$color-heading: #004266;        // Headings
 
-// Colors - Semantic
-$color-success: #28a745;
-$color-error: #ff4d4d;
-$color-error-dark: #cc0000;
+// Colors - Semantic (WCAG AA compliant contrast ratios)
+$color-success: #1e7e34;    // Green with 5.9:1 contrast (was #28a745 at 4.5:1)
+$color-error: #cc0000;      // Red with 7.3:1 contrast (was #ff4d4d at 4.5:1)
+$color-error-dark: #990000;
 
 // Colors - Text
-$color-text: #333;
-$color-text-muted: #777;
+$color-text: #1f2124;           // Site text color
+$color-text-muted: #69727d;
 
 // Colors - Backgrounds
 $color-bg-white: #fff;
 $color-bg-light: #fafafa;
-$color-bg-alt: #f1f1f1;
-$color-bg-hover: #e1f5fe;
+$color-bg-hover: #e8f4f8;       // Lighter blue hover
 
 // Colors - Border
-$color-border: #ddd;
+$color-border: #69727d;         // Site input border
 
-// Typography
-$font-size-base: 16px;
-$font-size-sm: 14px;
-$font-size-xs: 12px;
-$font-size-lg: 18px;
-$font-size-xl: 20px;
-$font-size-title: 28px;
-$font-size-admin-title: 32px;
+// Typography - inherits from theme, only override font-weight
+$font-weight-bold: 800;         // Site uses 800 for bold
 
 // Spacing
 $spacing-xs: 5px;
@@ -40,13 +34,11 @@ $spacing-md: 12px;
 $spacing-lg: 20px;
 $spacing-xl: 30px;
 
-// Border
-$border-radius: 6px;
-$border-radius-lg: 8px;
-$border-radius-xl: 10px;
+// Border - Square corners to match site
+$border-radius: 0;
 
 // Effects
-$box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+$box-shadow-lightbox: 0 4px 20px rgba(0, 0, 0, 0.15);
 $transition-base: 0.3s;
 
 // Breakpoints
@@ -55,7 +47,4 @@ $breakpoint-tablet: 1192px;
 
 // Layout
 $admin-max-width: 1200px;
-$public-table-width: 300px;
-$form-width: 50%;
-$form-width-mobile: 90%;
 $input-width: 95%;

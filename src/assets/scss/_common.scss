@@ -9,30 +9,29 @@
   width: 100%;
   border-collapse: collapse;
   background-color: $color-bg-white;
-  border-radius: $border-radius-lg;
-  box-shadow: $box-shadow;
   margin-top: $spacing-lg;
 }
 
 .rs-table th,
 .rs-table td {
-  padding: $spacing-md;
+  padding: $spacing-md $spacing-lg;
   text-align: center;
-  border: 1px solid $color-border;
+  border: 1px solid #e0e0e0;
+  vertical-align: middle;
 }
 
 .rs-table th {
   background-color: $color-primary;
   color: $color-bg-white;
-  font-weight: bold;
+  font-weight: $font-weight-bold;
 }
 
 .rs-table td {
-  background-color: $color-bg-light;
+  background-color: $color-bg-white;
 }
 
 .rs-table tr:nth-child(even) td {
-  background-color: $color-bg-alt;
+  background-color: $color-bg-light;
 }
 
 .rs-table tr:hover td {
@@ -67,4 +66,21 @@
   &:hover {
     text-decoration: underline;
   }
+}
+
+// ==========================================================================
+// Accessibility Utilities
+// ==========================================================================
+
+// Screen reader only - visually hidden but accessible
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }

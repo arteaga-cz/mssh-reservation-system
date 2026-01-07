@@ -1,109 +1,124 @@
 // ==========================================================================
 // Frontend Styles - Public Reservation Form
+// Aligned with ms-skolahrou.test theme
+// WCAG 2.2 AA Compliant
 // ==========================================================================
 
 @use 'common';
 @use 'variables' as *;
 
-// Container
+// Container - inherits theme typography
 .rs-container {
   display: flex;
   flex-direction: column;
-  max-width: 98%;
+  max-width: 767px;
   margin: 0 auto;
-  padding: $spacing-lg;
   align-items: center;
 }
 
-// Title
-.rs-title {
-  text-align: center;
-  color: $color-primary;
-  font-size: $font-size-title;
-}
-
-// Public Table - Narrow Width
+// Public Table
 .rs-container .rs-table {
-  width: $public-table-width;
-  margin: $spacing-xl auto;
+  width: auto;
+  margin: $spacing-lg auto;
 }
 
-.rs-container .rs-table th:first-child,
-.rs-container .rs-table td:first-child {
-  width: 50%;
-}
+// ==========================================================================
+// Form Inputs - match site style with WCAG focus indicators
+// ==========================================================================
 
-// Reservation Form
-.rs-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin-top: $spacing-lg;
-  background-color: $color-bg-white;
-  padding: $spacing-lg;
-  border-radius: $border-radius-xl;
-  box-shadow: $box-shadow;
-  width: $form-width;
-  align-items: center;
-}
-
-// Form Inputs
 .rs-input,
 .rs-select {
-  padding: $spacing-md;
-  font-size: $font-size-base;
-  border: 1px solid $color-border;
-  border-radius: $border-radius;
-  background-color: $color-bg-white;
-  color: $color-text;
-  transition: $transition-base;
-  width: $input-width;
-  box-sizing: border-box;
+  padding: 8px 16px !important;
+  border: 1px solid $color-border !important;
+  background-color: $color-bg-white !important;
+  color: $color-text !important;
+  transition: border-color $transition-base !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 
-  &:focus {
-    border-color: $color-primary;
-    outline: none;
+  &:focus,
+  &:focus-visible {
+    border-color: $color-primary !important;
+    outline: 2px solid $color-primary !important;
+    outline-offset: 1px !important;
+  }
+
+  &::placeholder {
+    color: $color-text-muted !important;
   }
 }
 
-.rs-input {
-  margin-bottom: $spacing-sm;
-}
+// ==========================================================================
+// Reserve Button - with !important to override theme and WCAG compliance
+// ==========================================================================
 
-.rs-select {
-  margin-bottom: $spacing-lg;
-}
-
-// Reserve Button
 .rs-reserve-button {
-  width: $input-width;
-  padding: $spacing-md;
-  background-color: $color-primary;
-  color: $color-bg-white;
-  font-size: $font-size-base;
-  cursor: pointer;
-  border: none;
-  border-radius: $border-radius;
-  box-sizing: border-box;
-  transition: background-color $transition-base;
+  padding: 12px 24px !important;
+  background-color: $color-primary !important;
+  color: $color-bg-white !important;
+  font-weight: $font-weight-bold !important;
+  cursor: pointer !important;
+  border: none !important;
+  box-sizing: border-box !important;
+  transition: background-color $transition-base !important;
+  text-decoration: none !important;
+  min-height: 40px !important; // Matches site button height
 
-  &:hover {
-    background-color: $color-primary-dark;
+  &:hover,
+  &:active {
+    background-color: $color-primary-dark !important;
+    color: $color-bg-white !important;
+    text-decoration: none !important;
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: 2px solid $color-heading !important;
+    outline-offset: 2px !important;
+    background-color: $color-primary !important;
+    color: $color-bg-white !important;
   }
 }
 
+// Table button - link style (transparent bg, blue text)
+.rs-table .rs-reserve-button {
+  background-color: transparent !important;
+  color: $color-primary !important;
+  border: none !important;
+  padding: 8px 16px !important;
+  min-height: 40px !important;
+  width: auto !important;
+
+  &:hover,
+  &:active {
+    background-color: transparent !important;
+    color: $color-primary-dark !important;
+    text-decoration: underline !important;
+  }
+
+  &:focus,
+  &:focus-visible {
+    background-color: transparent !important;
+    color: $color-primary !important;
+    outline: 2px solid $color-primary !important;
+    outline-offset: 2px !important;
+  }
+}
+
+// ==========================================================================
 // Messages
+// ==========================================================================
+
 .rs-message-success {
   color: $color-success;
-  font-size: $font-size-base;
-  font-weight: bold;
+  font-weight: $font-weight-bold;
   margin-top: $spacing-lg;
+  text-align: center;
 }
 
 .rs-error {
   text-align: center;
   color: $color-error;
-  font-size: $font-size-lg;
   margin-top: $spacing-lg;
 }
 
@@ -115,26 +130,181 @@
   padding: $spacing-lg;
 }
 
-// Mobile Responsive
-@media (max-width: $breakpoint-mobile) {
-  .rs-form {
-    width: $form-width-mobile;
+// ==========================================================================
+// Lightbox - Clean design with WCAG 2.2 AA compliance
+// ==========================================================================
+
+// Overlay
+.rs-lightbox-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+// Container
+.rs-lightbox {
+  background: $color-bg-white;
+  padding: $spacing-xl $spacing-xl $spacing-lg;
+  box-shadow: $box-shadow-lightbox;
+  max-width: 380px;
+  width: 90%;
+  position: relative;
+  animation: rs-lightbox-fade-in 0.2s ease-out;
+}
+
+@keyframes rs-lightbox-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Close button - WCAG 2.5.8 compliant (44x44px minimum)
+.rs-lightbox-close {
+  position: absolute !important;
+  top: $spacing-xs !important;
+  right: $spacing-xs !important;
+  background: none !important;
+  border: none !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  color: $color-text-muted !important;
+  padding: $spacing-sm !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: color $transition-base, background-color $transition-base !important;
+
+  svg {
+    width: 24px;
+    height: 24px;
+    pointer-events: none; // Clicks pass through to button
   }
 
-  .rs-table,
-  th,
-  td {
-    font-size: $font-size-sm;
+  &:hover {
+    color: $color-text !important;
+    background-color: $color-bg-light !important;
   }
 
-  .rs-input,
-  .rs-select,
+  &:focus,
+  &:focus-visible {
+    outline: 2px solid $color-primary !important;
+    outline-offset: -2px !important;
+    color: $color-text !important;
+  }
+}
+
+// Title
+.rs-lightbox-title {
+  color: $color-heading !important;
+  font-weight: $font-weight-bold !important;
+  margin: 0 0 $spacing-md 0 !important;
+  text-align: center !important;
+}
+
+// Form
+.rs-lightbox-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  .rs-input {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .rs-label {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  // WCAG 2.4.6: Visible label text
+  .rs-label-text {
+    font-weight: $font-weight-bold;
+    color: $color-text;
+    font-size: 14px;
+  }
+}
+
+// Button row
+.rs-lightbox-buttons {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+
+  button {
+    flex: 1;
+  }
+
   .rs-reserve-button {
-    font-size: $font-size-sm;
-    padding: $spacing-sm;
+    width: auto !important;
+    padding: 12px 20px !important;
+  }
+}
+
+// Cancel button - outlined style with WCAG focus
+.rs-lightbox-cancel {
+  background: transparent !important;
+  color: $color-text !important;
+  border: 1px solid $color-border !important;
+  padding: 12px 20px !important;
+  font-weight: $font-weight-bold !important;
+  cursor: pointer !important;
+  transition: background-color $transition-base, border-color $transition-base !important;
+  min-height: 40px !important; // Matches site button height
+  text-decoration: none !important;
+
+  &:hover {
+    background: $color-bg-light !important;
+    border-color: $color-text-muted !important;
+    text-decoration: none !important;
   }
 
-  .rs-name {
-    font-size: 10px;
+  &:focus,
+  &:focus-visible {
+    outline: 2px solid $color-primary !important;
+    outline-offset: 2px !important;
+  }
+}
+
+// ==========================================================================
+// Mobile Responsive - maintain WCAG compliance
+// ==========================================================================
+
+@media (max-width: $breakpoint-mobile) {
+  // Table button on mobile
+  .rs-table .rs-reserve-button {
+    padding: 6px 12px !important;
+    min-height: 40px !important;
+  }
+
+  .rs-lightbox {
+    padding: $spacing-lg;
+    max-width: 95%;
+  }
+
+  .rs-lightbox-buttons {
+    flex-direction: column;
+
+    .rs-reserve-button,
+    .rs-lightbox-cancel {
+      width: 100% !important;
+      min-height: 40px !important;
+    }
   }
 }

@@ -5,7 +5,7 @@
 @use 'common';
 @use 'variables' as *;
 
-// Admin Container
+// Admin Container - inherits WP admin typography
 .rs-admin-container {
   max-width: $admin-max-width;
   margin: 0 auto;
@@ -13,7 +13,6 @@
 
   h1 {
     color: $color-primary;
-    font-size: $font-size-admin-title;
   }
 }
 
@@ -26,7 +25,6 @@
 .btn-delete {
   background-color: $color-error;
   color: $color-bg-white;
-  font-size: $font-size-sm;
   padding: 3px 30px;
   border: none;
   border-radius: $border-radius;
@@ -52,7 +50,6 @@
   flex-direction: column;
   padding-left: 0;
   margin: 0;
-  font-size: $font-size-lg;
   gap: $spacing-xs;
 }
 
@@ -84,7 +81,6 @@
   gap: $spacing-xs;
   justify-content: center;
   max-height: 50%;
-  font-size: $font-size-base;
   margin: 0;
 }
 
@@ -123,22 +119,11 @@
 
 // Tablet Responsive
 @media (max-width: $breakpoint-tablet) {
-  .rs-action-capacity {
-    font-size: $font-size-xs;
-  }
-
   .rs-delete {
     width: 50%;
   }
 
   .rs-capacity-button {
     width: 50%;
-  }
-}
-
-// Mobile Responsive
-@media (max-width: $breakpoint-mobile) {
-  .btn-delete {
-    font-size: $font-size-xs;
   }
 }
