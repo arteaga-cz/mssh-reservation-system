@@ -153,6 +153,12 @@ function rs_get_config() {
 	if ( ! isset( $config['reservations_enabled'] ) ) {
 		$config['reservations_enabled'] = 0;
 	}
+	if ( ! isset( $config['closed_notice_text'] ) ) {
+		$config['closed_notice_text'] = 'Rezervace jsou momentálně uzavřeny.';
+	}
+	if ( ! isset( $config['hide_closed_notice'] ) ) {
+		$config['hide_closed_notice'] = 0;
+	}
 
 	return $config;
 }
@@ -177,7 +183,9 @@ function rs_reservation_table_shortcode() {
         }
         ?>
 		<?php if ( ! $config['reservations_enabled'] ) : ?>
-            <p class="rs-error">Rezervace jsou momentálně uzavřeny.</p>
+			<?php if ( ! $config['hide_closed_notice'] ) : ?>
+            <p class="rs-error"><?php echo esc_html( $config['closed_notice_text'] ); ?></p>
+			<?php endif; ?>
 		<?php else : ?>
             <table class="rs-table">
                 <!-- WCAG 1.3.1: Caption describes table purpose for screen readers -->
@@ -515,6 +523,7 @@ function rs_admin_page(): void {
         echo '<div class="error"><p><strong>Žádné rezervace k exportu.</strong></p></div>';
         } ?>
         <h2>Nastavení</h2>
+        <p class="description">Shortcode: <code>[reservation_table]</code></p>
         <form method="POST">
 			<?php wp_nonce_field( 'rs_update_settings_action', 'rs_update_settings_nonce' );
 			$config = rs_get_config() ?>
@@ -528,6 +537,20 @@ function rs_admin_page(): void {
                 <label for="reservations_enabled_off">
                     <input type="radio" name="reservations_enabled" value="0"
                            id="reservations_enabled_off" <?php checked( 0, $config['reservations_enabled'] ); ?>/>Vypnuto
+                </label>
+            </p>
+            <p>
+                <label for="closed_notice_text">Text oznámení při uzavření:</label><br>
+                <input type="text" name="closed_notice_text" id="closed_notice_text"
+                       value="<?php echo esc_attr( $config['closed_notice_text'] ); ?>"
+                       class="regular-text" placeholder="Rezervace jsou momentálně uzavřeny." />
+                <span class="description">Vlastní text zobrazený, když jsou rezervace vypnuty.</span>
+            </p>
+            <p>
+                <label for="hide_closed_notice">
+                    <input type="checkbox" name="hide_closed_notice" id="hide_closed_notice"
+                           value="1" <?php checked( 1, $config['hide_closed_notice'] ); ?> />
+                    Skrýt oznámení o uzavření na webu
                 </label>
             </p>
             <p>
@@ -650,6 +673,8 @@ function rs_update_plugin_settings(): void {
 	if ( isset( $_POST['update_config'] ) && isset( $_POST['rs_update_settings_nonce'] ) && wp_verify_nonce( $_POST['rs_update_settings_nonce'], 'rs_update_settings_action' ) ) {
 		$config                         = get_option( 'rs_config' );
 		$config['reservations_enabled'] = isset( $_POST['reservations_enabled'] ) ? (int) $_POST['reservations_enabled'] : 0;
+		$config['closed_notice_text']   = isset( $_POST['closed_notice_text'] ) ? sanitize_text_field( $_POST['closed_notice_text'] ) : 'Rezervace jsou momentálně uzavřeny.';
+		$config['hide_closed_notice']   = isset( $_POST['hide_closed_notice'] ) ? 1 : 0;
 		update_option( 'rs_config', $config );
         rs_set_message('Nastavení bylo úspěšně aktualizováno.', 'updated', admin_url( 'admin.php?page=rs-admin' ));
 	}
