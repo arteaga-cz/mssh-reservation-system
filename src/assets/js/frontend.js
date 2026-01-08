@@ -1,6 +1,6 @@
 /**
  * Reservation System - Frontend
- * Loads slot availability via AJAX and handles lightbox interaction
+ * Loads slot availability via AJAX and handles lightbox interaction and form submission
  */
 document.addEventListener('DOMContentLoaded', function() {
     const overlay = document.querySelector('.rs-lightbox-overlay');
@@ -12,11 +12,35 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelBtn = document.querySelector('.rs-lightbox-cancel');
     const slotsBody = document.getElementById('rs-slots-body');
     const container = document.getElementById('rs-availability-container');
+    const form = document.getElementById('rs-reservation-form');
+    const messageContainer = document.querySelector('.rs-lightbox-message');
+    const submitBtn = form?.querySelector('button[type="submit"]');
 
     // Exit if no container found
     if (!container || !slotsBody) return;
 
     let lastFocusedElement = null;
+    let reservationNonce = typeof rsConfig !== 'undefined' ? rsConfig.reservationNonce : '';
+
+    /**
+     * Show a message in the lightbox
+     */
+    function showMessage(text, type) {
+        if (!messageContainer) return;
+        messageContainer.textContent = text;
+        messageContainer.className = 'rs-lightbox-message ' +
+            (type === 'success' ? 'rs-message-success' : 'rs-error');
+    }
+
+    /**
+     * Clear the message in the lightbox
+     */
+    function clearMessage() {
+        if (messageContainer) {
+            messageContainer.textContent = '';
+            messageContainer.className = 'rs-lightbox-message';
+        }
+    }
 
     /**
      * Open the lightbox with the selected time
@@ -28,6 +52,9 @@ document.addEventListener('DOMContentLoaded', function() {
         timeSpan.textContent = time;
         timeInput.value = time;
         overlay.style.display = 'flex';
+
+        // Clear any previous messages
+        clearMessage();
 
         // Focus on the name input after a brief delay for animation
         setTimeout(() => {
@@ -46,6 +73,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         overlay.style.display = 'none';
         if (nameInput) nameInput.value = '';
+
+        // Clear any messages
+        clearMessage();
 
         // Restore body scroll
         document.body.style.overflow = '';
@@ -196,6 +226,57 @@ document.addEventListener('DOMContentLoaded', function() {
                     firstElement.focus();
                 }
             }
+        });
+    }
+
+    // Setup form submission via AJAX
+    if (form && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Odesílám...';
+            clearMessage();
+
+            fetch(rsConfig.ajaxUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({
+                    action: 'rs_submit_reservation',
+                    nonce: reservationNonce,
+                    name: nameInput.value,
+                    time: timeInput.value
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Update nonce for future submissions
+                if (data.data?.new_nonce) {
+                    reservationNonce = data.data.new_nonce;
+                }
+
+                if (data.success) {
+                    showMessage(data.data.message, 'success');
+                    nameInput.value = '';
+                    // Auto-close after 2 seconds and refresh slots
+                    setTimeout(() => {
+                        closeLightbox();
+                        loadAvailability();
+                    }, 2000);
+                } else {
+                    showMessage(data.data.message, 'error');
+                }
+            })
+            .catch(() => {
+                showMessage('Chyba při odesílání. Zkuste to prosím znovu.', 'error');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            });
         });
     }
 

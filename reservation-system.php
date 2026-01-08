@@ -34,10 +34,11 @@ function rs_enqueue_frontend_assets(): void {
 		}
 		wp_enqueue_script( 'rs-frontend-script', plugin_dir_url( __FILE__ ) . $script_path, array(), RS_VERSION, true );
 
-		// Pass AJAX configuration to JavaScript for dynamic slot loading
+		// Pass AJAX configuration to JavaScript for dynamic slot loading and form submission
 		wp_localize_script( 'rs-frontend-script', 'rsConfig', [
-			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-			'nonce'   => wp_create_nonce( 'rs_availability_nonce' ),
+			'ajaxUrl'          => admin_url( 'admin-ajax.php' ),
+			'nonce'            => wp_create_nonce( 'rs_availability_nonce' ),
+			'reservationNonce' => wp_create_nonce( 'rs_reservation_action' ),
 		] );
 	}
 }
@@ -173,17 +174,6 @@ function rs_reservation_table_shortcode() {
 	ob_start();
 	?>
     <div class="rs-container">
-		<?php
-        if (!empty($_SESSION['flash_message'])) {
-            $message = $_SESSION['flash_message']['text'];
-            $type = $_SESSION['flash_message']['type'];
-
-            // WCAG 4.1.3: Status messages announced to screen readers via live region
-            echo '<div role="status" aria-live="polite" class="' . esc_attr($type) . '">' . esc_html($message) . '</div>';
-
-            unset($_SESSION['flash_message']);
-        }
-        ?>
         <!-- Slot data loaded dynamically via AJAX to avoid stale cached data -->
         <div id="rs-availability-container">
             <table class="rs-table">
@@ -216,10 +206,10 @@ function rs_reservation_table_shortcode() {
                         </svg>
                     </button>
                     <h3 id="rs-lightbox-title" class="rs-lightbox-title">Rezervace na <span class="rs-lightbox-time"></span></h3>
-                    <form method="POST" action="<?php echo esc_url( $_SERVER['REQUEST_URI'] ); ?>" class="rs-lightbox-form">
-                        <?php wp_nonce_field( 'rs_reservation_action', 'rs_reservation_nonce' ); ?>
-                        <input type="hidden" name="rs_redirect_url" value="<?php echo esc_url( get_permalink() ); ?>" />
+                    <form id="rs-reservation-form" class="rs-lightbox-form">
                         <input type="hidden" name="time" class="rs-lightbox-time-input" value="" />
+                        <!-- WCAG 4.1.3: Status messages announced via live region -->
+                        <div class="rs-lightbox-message" role="status" aria-live="polite"></div>
                         <!-- WCAG 1.3.1, 2.4.6: Explicit label association with visible label -->
                         <label for="rs-reservation-name" class="rs-label">
                             <span class="rs-label-text">Jméno a příjmení dítěte <span class="rs-required" aria-hidden="true">*</span></span>
@@ -239,78 +229,6 @@ function rs_reservation_table_shortcode() {
 }
 
 add_shortcode( 'reservation_table', 'rs_reservation_table_shortcode' );
-
-function rs_handle_reservation_submission(): void {
-	if ( isset( $_POST['submit_reservation'] ) ) {
-		if ( ! isset( $_POST['rs_reservation_nonce'] ) || ! wp_verify_nonce( $_POST['rs_reservation_nonce'], 'rs_reservation_action' ) ) {
-			return;
-		}
-
-		// Capture redirect URL from form for proper redirection after processing
-		$redirect_url = isset($_POST['rs_redirect_url'])
-			? esc_url_raw($_POST['rs_redirect_url'])
-			: null;
-
-		$name = sanitize_text_field( $_POST['name'] );
-		$time = sanitize_text_field( $_POST['time'] );
-
-		// Validate required fields (server-side check - client-side can be bypassed)
-		if ( empty( $name ) ) {
-			rs_set_message( 'Jméno a příjmení dítěte je povinné pole.', 'rs-error', $redirect_url );
-		}
-
-		global $wpdb;
-		$reservations_table = $wpdb->prefix . 'reservations';
-		$capacity_table     = $wpdb->prefix . 'reservation_slots';
-
-		$capacity = $wpdb->get_var( $wpdb->prepare(
-			"SELECT capacity FROM $capacity_table WHERE time = %s",
-			$time
-		) );
-
-		if ( is_null( $capacity ) ) {
-			$capacity = 6;
-		}
-
-		$existing_reservations_count = $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM $reservations_table WHERE time = %s",
-			$time
-		) );
-
-		if ( $existing_reservations_count >= $capacity ) {
-            rs_set_message('Kapacita pro tento čas je již plná.', 'rs-error', $redirect_url);
-		}
-
-		$existing_reservation = $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM $reservations_table WHERE name = %s",
-			$name
-		) );
-
-		if ( $existing_reservation > 0 ) {
-            rs_set_message('Rezervace pro toto jméno již existuje. V případě shody jmen napište za jméno dítěte do závorek jméno rodiče. Pokud jste jméno nezadávali vy, obraťte se na školku.', 'rs-error', $redirect_url);
-		}
-
-		$insert_result = $wpdb->insert(
-			$reservations_table,
-			array(
-				'name' => $name,
-				'time' => $time,
-			),
-			array(
-				'%s',
-				'%s',
-			)
-		);
-
-		if ( $insert_result !== false ) {
-            rs_set_message('Rezervace byla úspěšně provedena!', 'rs-message-success', $redirect_url);
-		} else {
-			rs_set_message('Chyba při ukládání rezervace.', 'rs-message-error', $redirect_url);
-		}
-	}
-}
-
-add_action( 'template_redirect', 'rs_handle_reservation_submission' );
 
 function rs_admin_menu(): void {
 	add_menu_page( 'Rezervace', 'Rezervace', 'manage_options', 'rs-admin', 'rs_admin_page', 'dashicons-calendar-alt' );
@@ -765,6 +683,87 @@ function rs_ajax_get_availability(): void {
 }
 add_action( 'wp_ajax_rs_get_availability', 'rs_ajax_get_availability' );
 add_action( 'wp_ajax_nopriv_rs_get_availability', 'rs_ajax_get_availability' );
+
+/**
+ * AJAX endpoint for submitting a reservation.
+ * Returns JSON response with success/error message and new nonce.
+ */
+function rs_ajax_submit_reservation(): void {
+	check_ajax_referer( 'rs_reservation_action', 'nonce' );
+
+	$name = sanitize_text_field( $_POST['name'] ?? '' );
+	$time = sanitize_text_field( $_POST['time'] ?? '' );
+
+	// Validate required fields
+	if ( empty( $name ) ) {
+		wp_send_json_error( [
+			'message'   => 'Jméno a příjmení dítěte je povinné pole.',
+			'new_nonce' => wp_create_nonce( 'rs_reservation_action' ),
+		] );
+	}
+
+	global $wpdb;
+	$reservations_table = $wpdb->prefix . 'reservations';
+	$capacity_table     = $wpdb->prefix . 'reservation_slots';
+
+	// Check capacity
+	$capacity = $wpdb->get_var( $wpdb->prepare(
+		"SELECT capacity FROM $capacity_table WHERE time = %s",
+		$time
+	) );
+	if ( is_null( $capacity ) ) {
+		$capacity = 6;
+	}
+
+	$count = $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM $reservations_table WHERE time = %s",
+		$time
+	) );
+
+	if ( $count >= $capacity ) {
+		wp_send_json_error( [
+			'message'   => 'Kapacita pro tento čas je již plná.',
+			'new_nonce' => wp_create_nonce( 'rs_reservation_action' ),
+		] );
+	}
+
+	// Check duplicate name
+	$exists = $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM $reservations_table WHERE name = %s",
+		$name
+	) );
+
+	if ( $exists > 0 ) {
+		wp_send_json_error( [
+			'message'   => 'Rezervace pro toto jméno již existuje. V případě shody jmen napište za jméno dítěte do závorek jméno rodiče. Pokud jste jméno nezadávali vy, obraťte se na školku.',
+			'new_nonce' => wp_create_nonce( 'rs_reservation_action' ),
+		] );
+	}
+
+	// Insert reservation
+	$result = $wpdb->insert(
+		$reservations_table,
+		[
+			'name' => $name,
+			'time' => $time,
+		],
+		[ '%s', '%s' ]
+	);
+
+	if ( $result !== false ) {
+		wp_send_json_success( [
+			'message'   => 'Rezervace byla úspěšně provedena!',
+			'new_nonce' => wp_create_nonce( 'rs_reservation_action' ),
+		] );
+	} else {
+		wp_send_json_error( [
+			'message'   => 'Chyba při ukládání rezervace.',
+			'new_nonce' => wp_create_nonce( 'rs_reservation_action' ),
+		] );
+	}
+}
+add_action( 'wp_ajax_rs_submit_reservation', 'rs_ajax_submit_reservation' );
+add_action( 'wp_ajax_nopriv_rs_submit_reservation', 'rs_ajax_submit_reservation' );
 
 function rs_generate_times(): array {
 	$settings = rs_get_time_settings();

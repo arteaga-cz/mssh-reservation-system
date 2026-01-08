@@ -278,6 +278,32 @@
   }
 }
 
+// Lightbox message (AJAX feedback)
+.rs-lightbox-message {
+  text-align: center;
+  padding: 0;
+  min-height: 0;
+  transition: all 0.2s ease;
+
+  &:not(:empty) {
+    padding: $spacing-sm $spacing-md;
+    margin-bottom: $spacing-sm;
+  }
+
+  &.rs-message-success {
+    background-color: rgba($color-success, 0.1);
+    color: $color-success;
+    font-weight: $font-weight-bold;
+    margin-top: 0;
+  }
+
+  &.rs-error {
+    background-color: rgba($color-error, 0.1);
+    color: $color-error;
+    margin-top: 0;
+  }
+}
+
 // Button row
 .rs-lightbox-buttons {
   display: flex;
