@@ -2,14 +2,14 @@
 /*
 Plugin Name: Zápisový Rezervační systém
 Description: Plugin pro správu rezervací a zobrazení časových slotů pro uživatele.
-Version: 1.3.0
+Version: 1.4.0
 Author: Jan Veselský
 */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'RS_VERSION', '1.3.0' );
+define( 'RS_VERSION', '1.4.0' );
 
 ob_start();
 session_start();
@@ -33,6 +33,12 @@ function rs_enqueue_frontend_assets(): void {
 			$script_path = 'assets/js/frontend.js';
 		}
 		wp_enqueue_script( 'rs-frontend-script', plugin_dir_url( __FILE__ ) . $script_path, array(), RS_VERSION, true );
+
+		// Pass AJAX configuration to JavaScript for dynamic slot loading
+		wp_localize_script( 'rs-frontend-script', 'rsConfig', [
+			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+			'nonce'   => wp_create_nonce( 'rs_availability_nonce' ),
+		] );
 	}
 }
 
@@ -164,10 +170,6 @@ function rs_get_config() {
 }
 
 function rs_reservation_table_shortcode() {
-	$data   = rs_load_public_data();
-	$times  = rs_generate_times();
-	$config = rs_get_config();
-
 	ob_start();
 	?>
     <div class="rs-container">
@@ -182,11 +184,8 @@ function rs_reservation_table_shortcode() {
             unset($_SESSION['flash_message']);
         }
         ?>
-		<?php if ( ! $config['reservations_enabled'] ) : ?>
-			<?php if ( ! $config['hide_closed_notice'] ) : ?>
-            <p class="rs-error"><?php echo esc_html( $config['closed_notice_text'] ); ?></p>
-			<?php endif; ?>
-		<?php else : ?>
+        <!-- Slot data loaded dynamically via AJAX to avoid stale cached data -->
+        <div id="rs-availability-container">
             <table class="rs-table">
                 <!-- WCAG 1.3.1: Caption describes table purpose for screen readers -->
                 <caption class="sr-only">Dostupné časové termíny pro rezervaci</caption>
@@ -197,36 +196,15 @@ function rs_reservation_table_shortcode() {
                     <th scope="col"><span class="sr-only">Akce</span></th>
                 </tr>
                 </thead>
-                <tbody>
-				<?php
-				$has_available_slots = false;
-				foreach ( $times as $time ) :
-					$count = $data[ $time ]['count'] ?? 0;
-					$capacity = $data[ $time ]['capacity'] ?? 6;
-
-					// Skip fully booked slots
-					if ( $count >= $capacity ) {
-						continue;
-					}
-					$has_available_slots = true;
-					?>
-                    <tr>
-                        <td><?php echo esc_html( $time ); ?></td>
-                        <td><?php echo esc_html( rs_format_available_spots( $capacity - $count ) ); ?></td>
-                        <td>
-                            <button type="button" class="rs-reserve-button rs-open-lightbox" data-time="<?php echo esc_attr( $time ); ?>">
-                                Rezervovat
-                            </button>
+                <tbody id="rs-slots-body">
+                    <tr class="rs-loading">
+                        <td colspan="3">
+                            <span class="rs-loading-text">Načítání...</span>
                         </td>
                     </tr>
-				<?php endforeach; ?>
-				<?php if ( ! $has_available_slots ) : ?>
-                    <tr>
-                        <td colspan="3" class="rs-no-slots">Všechny termíny jsou obsazeny</td>
-                    </tr>
-				<?php endif; ?>
                 </tbody>
             </table>
+        </div>
 
             <!-- Lightbox Overlay -->
             <div class="rs-lightbox-overlay" role="dialog" aria-modal="true" aria-labelledby="rs-lightbox-title">
@@ -254,7 +232,6 @@ function rs_reservation_table_shortcode() {
                     </form>
                 </div>
             </div>
-		<?php endif; ?>
     </div>
 	<?php
 	return ob_get_clean();
@@ -744,6 +721,44 @@ function rs_format_available_spots( int $count ): string {
 		return $count . ' volných míst';
 	}
 }
+
+/**
+ * AJAX endpoint for fetching current slot availability.
+ * Returns fresh data to avoid stale cached pages.
+ */
+function rs_ajax_get_availability(): void {
+	check_ajax_referer( 'rs_availability_nonce', 'nonce' );
+
+	$config = rs_get_config();
+	if ( ! $config['reservations_enabled'] ) {
+		wp_send_json_error( [
+			'message' => 'closed',
+			'notice'  => $config['hide_closed_notice'] ? '' : $config['closed_notice_text'],
+		] );
+	}
+
+	$data  = rs_load_public_data();
+	$times = rs_generate_times();
+
+	$slots = [];
+	foreach ( $times as $time ) {
+		$count     = $data[ $time ]['count'] ?? 0;
+		$capacity  = $data[ $time ]['capacity'] ?? 6;
+		$available = $capacity - $count;
+
+		if ( $available > 0 ) {
+			$slots[] = [
+				'time'      => $time,
+				'available' => $available,
+				'label'     => rs_format_available_spots( $available ),
+			];
+		}
+	}
+
+	wp_send_json_success( [ 'slots' => $slots ] );
+}
+add_action( 'wp_ajax_rs_get_availability', 'rs_ajax_get_availability' );
+add_action( 'wp_ajax_nopriv_rs_get_availability', 'rs_ajax_get_availability' );
 
 function rs_generate_times(): array {
 	$settings = rs_get_time_settings();

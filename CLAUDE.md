@@ -43,8 +43,9 @@ feat: tighten profile domain validation
 **Data flow:**
 1. Time slots are generated dynamically based on start time, end time, and interval (stored in WP options)
 2. Each slot has a configurable capacity (default 6)
-3. Users submit reservations via POST form with nonce verification
-4. Flash messages use PHP sessions (`$_SESSION`)
+3. Slot availability is loaded via AJAX (`rs_ajax_get_availability`) to avoid stale cached data
+4. Users submit reservations via POST form with nonce verification
+5. Flash messages use PHP sessions (`$_SESSION`)
 
 ## Development Commands
 
@@ -63,7 +64,8 @@ php -l reservation-system.php
 | Function | Purpose |
 |----------|---------|
 | `rs_activate_plugin()` | Creates database tables and initializes slots |
-| `rs_reservation_table_shortcode()` | Renders public reservation table |
+| `rs_reservation_table_shortcode()` | Renders public reservation table (skeleton + lightbox) |
+| `rs_ajax_get_availability()` | AJAX endpoint returning current slot availability |
 | `rs_admin_page()` | Renders admin management interface |
 | `rs_handle_reservation_submission()` | Processes form submissions (hooked to `template_redirect`) |
 | `rs_export_reservations_to_excel()` | Generates Excel file for download |

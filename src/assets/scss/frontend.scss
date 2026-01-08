@@ -131,6 +131,30 @@
 }
 
 // ==========================================================================
+// Loading State - AJAX slot availability loading
+// ==========================================================================
+
+.rs-loading td {
+  text-align: center;
+  padding: $spacing-lg $spacing-md;
+  color: $color-text-muted;
+}
+
+.rs-loading-text {
+  display: inline-block;
+  animation: rs-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes rs-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+// ==========================================================================
 // Lightbox - Clean design with WCAG 2.2 AA compliance
 // ==========================================================================
 

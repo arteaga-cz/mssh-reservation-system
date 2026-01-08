@@ -13,13 +13,14 @@ Renders the public reservation table with lightbox modal form.
 
 **Behavior:**
 - Displays flash messages from session (with ARIA live region)
-- If reservations disabled: shows configurable notice (or nothing if hidden)
-- If enabled: renders time slot table with available spots, lightbox modal form
+- Renders table skeleton with loading state
+- Slot availability loaded dynamically via AJAX (avoids stale cached data)
 - Fully booked slots are hidden from public view
 - Form includes CSRF nonce protection
 
 **Output:** HTML containing:
 - Table with columns: Čas (Time), Volná místa (Available spots), Akce (Action button)
+- Loading skeleton (`#rs-slots-body`) populated by JavaScript via AJAX
 - Lightbox modal with name input field (WCAG 2.2 AA compliant)
 - Screen reader accessible with focus trap and keyboard navigation
 
@@ -90,6 +91,48 @@ Formats available spots with proper Czech grammar.
 rs_format_available_spots(1);  // Returns: '1 volné místo'
 rs_format_available_spots(3);  // Returns: '3 volná místa'
 rs_format_available_spots(5);  // Returns: '5 volných míst'
+```
+
+### AJAX Endpoints
+
+#### `rs_ajax_get_availability(): void`
+Returns current slot availability via AJAX. Used by frontend JavaScript to load fresh data on each page view, avoiding stale cached data.
+
+**Hooked to:** `wp_ajax_rs_get_availability`, `wp_ajax_nopriv_rs_get_availability`
+
+**Request:**
+```javascript
+fetch(rsConfig.ajaxUrl, {
+    method: 'POST',
+    body: new URLSearchParams({
+        action: 'rs_get_availability',
+        nonce: rsConfig.nonce  // rs_availability_nonce
+    })
+})
+```
+
+**Response (success):**
+```json
+{
+    "success": true,
+    "data": {
+        "slots": [
+            {"time": "09:00", "available": 4, "label": "4 volná místa"},
+            {"time": "09:15", "available": 6, "label": "6 volných míst"}
+        ]
+    }
+}
+```
+
+**Response (reservations disabled):**
+```json
+{
+    "success": false,
+    "data": {
+        "message": "closed",
+        "notice": "Rezervace jsou momentálně uzavřeny."
+    }
+}
 ```
 
 ### Lifecycle
@@ -212,6 +255,8 @@ Generates and downloads Excel file with all reservations.
 | `admin_init` | `rs_reset_plugin_handler` | 10 | Reset plugin to defaults |
 | `admin_init` | `rs_update_plugin_settings` | 10 | Handle config settings |
 | `template_redirect` | `rs_handle_reservation_submission` | 10 | Process reservations |
+| `wp_ajax_rs_get_availability` | `rs_ajax_get_availability` | 10 | AJAX slot availability (logged in) |
+| `wp_ajax_nopriv_rs_get_availability` | `rs_ajax_get_availability` | 10 | AJAX slot availability (public) |
 | `admin_post_update_time_range` | `rs_update_slots_after_time_change` | 10 | Sync slots |
 | `admin_post_export_reservations_to_excel` | `rs_export_reservations_to_excel` | 10 | Excel download |
 
@@ -228,6 +273,7 @@ register_activation_hook(__FILE__, 'rs_activate_plugin');
 | Form | Nonce Field | Action |
 |------|-------------|--------|
 | Public reservation | `rs_reservation_nonce` | `rs_reservation_action` |
+| AJAX availability | `nonce` (POST param) | `rs_availability_nonce` |
 | Admin settings | `rs_update_settings_nonce` | `rs_update_settings_action` |
 | Time range settings | `rs_update_time_range_nonce` | `rs_update_time_range_action` |
 | Update capacity | `rs_update_capacity_nonce` | `rs_update_capacity_action` |

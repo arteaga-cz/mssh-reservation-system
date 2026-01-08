@@ -45,14 +45,29 @@ User visits page with [reservation_table]
          ▼
 rs_reservation_table_shortcode()
          │
-         ├── rs_load_public_data() ──► {prefix}_reservations (counts only)
-         │                             {prefix}_reservation_slots
-         ├── rs_generate_times() ────► Options: rs_start_time, rs_end_time, rs_time_interval
-         └── rs_get_config() ────────► Option: rs_config
+         └── Renders loading skeleton + lightbox modal
+             (HTML is cacheable, no stale data)
          │
          ▼
-Renders HTML table + lightbox modal
-(Booked slots hidden, available spots shown)
+frontend.js DOMContentLoaded
+         │
+         ▼
+loadAvailability() ──► AJAX POST to admin-ajax.php
+         │              action: rs_get_availability
+         │              nonce: rs_availability_nonce
+         │
+         ▼
+rs_ajax_get_availability()
+         │
+         ├── Verify nonce
+         ├── Check rs_get_config() → reservations enabled?
+         ├── rs_load_public_data() ──► {prefix}_reservations (counts only)
+         ├── rs_generate_times() ────► Options: rs_start_time, rs_end_time
+         └── Return JSON with available slots
+         │
+         ▼
+frontend.js renderSlots()
+(Populates table, attaches button handlers)
          │
          ▼
 User clicks "Rezervovat" button
