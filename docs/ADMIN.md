@@ -12,7 +12,13 @@
 Toggle reservation system on/off:
 
 - **Zapnuto** (On) - Public users can make reservations
-- **Vypnuto** (Off) - Shows "Rezervace jsou momentálně uzavřeny" to users
+- **Vypnuto** (Off) - Shows closed notice to users
+
+**Additional settings:**
+- **Text oznámení při uzavření** - Customize the message shown when reservations are closed (default: "Rezervace jsou momentálně uzavřeny.")
+- **Skrýt oznámení o uzavření na webu** - Check to hide the closed notice entirely on the frontend
+
+**Shortcode hint:** The admin page displays the shortcode `[reservation_table]` for easy copying.
 
 Click **Uložit změny** to save.
 
@@ -97,9 +103,11 @@ Add to any page/post:
 ```
 
 Displays:
-- Reservation table (when enabled)
-- Reservation form (when enabled)
-- "Closed" message (when disabled)
+- Reservation table with available time slots (when enabled)
+- Lightbox modal form for making reservations (when enabled)
+- Custom closed message (when disabled, unless hidden)
+
+**Privacy:** The public view shows only available slot counts, not reservation names.
 
 ## Workflow: Setting Up New Enrollment Period
 

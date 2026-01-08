@@ -17,12 +17,19 @@
 reservation-system/
 ├── reservation-system.php   # Main plugin file (all logic)
 ├── assets/
-│   └── style.css                 # Public + admin styling
+│   ├── css/
+│   │   ├── admin.css            # Admin panel styling
+│   │   ├── admin.min.css        # Minified admin CSS
+│   │   ├── frontend.css         # Public-facing styling
+│   │   └── frontend.min.css     # Minified frontend CSS
+│   └── js/
+│       ├── frontend.js          # Lightbox interaction
+│       └── frontend.min.js      # Minified frontend JS
 ├── lib/
-│   ├── composer.json             # Dependencies (PhpSpreadsheet)
-│   └── vendor/                   # Composer packages
-├── docs/                         # This documentation
-└── CLAUDE.md                     # AI assistant guidance
+│   ├── composer.json            # Dependencies (PhpSpreadsheet)
+│   └── vendor/                  # Composer packages
+├── docs/                        # This documentation
+└── CLAUDE.md                    # AI assistant guidance
 ```
 
 ## Key Concepts
@@ -53,6 +60,7 @@ One reservation per name (unique constraint). Names are sanitized and stored wit
 - **WordPress** 5.0+ (uses `$wpdb`, nonces, options API)
 - **PHP** 7.4+ (typed function signatures)
 - **PhpSpreadsheet** 1.18 (Excel export functionality)
+- **JavaScript** ES6+ (lightbox modal functionality)
 
 ## Related Files
 

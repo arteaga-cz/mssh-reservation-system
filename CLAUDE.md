@@ -85,12 +85,17 @@ php -l reservation-system.php
 - `rs_start_time` - Time slot start (default: "09:00")
 - `rs_end_time` - Time slot end (default: "16:30")
 - `rs_time_interval` - Minutes between slots (default: 15)
-- `rs_config` - Array containing `reservations_enabled` flag
+- `rs_config` - Array containing:
+  - `reservations_enabled` - Enable/disable reservations (0/1)
+  - `closed_notice_text` - Custom message when closed
+  - `hide_closed_notice` - Hide closed notice on frontend (0/1)
 
 ## Files
 
 - `reservation-system.php` - All plugin logic
-- `assets/style.css` - Styling for public and admin views
+- `assets/css/frontend.css` - Public-facing styles (with lightbox)
+- `assets/css/admin.css` - Admin panel styles
+- `assets/js/frontend.js` - Lightbox modal functionality
 - `lib/` - Composer dependencies (PhpSpreadsheet for Excel export)
 
 ## Documentation

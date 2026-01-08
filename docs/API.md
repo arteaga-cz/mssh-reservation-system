@@ -4,7 +4,7 @@
 
 ### `[reservation_table]`
 
-Renders the public reservation table and form.
+Renders the public reservation table with lightbox modal form.
 
 **Usage:**
 ```
@@ -12,15 +12,16 @@ Renders the public reservation table and form.
 ```
 
 **Behavior:**
-- Displays flash messages from session
-- If reservations disabled: shows error message
-- If enabled: renders time slot table with names, reservation form
+- Displays flash messages from session (with ARIA live region)
+- If reservations disabled: shows configurable notice (or nothing if hidden)
+- If enabled: renders time slot table with available spots, lightbox modal form
+- Fully booked slots are hidden from public view
 - Form includes CSRF nonce protection
 
 **Output:** HTML containing:
-- Title "Rezervační Tabulka"
-- Table with columns: Čas (Time), Rezervace (count/capacity), Jména (Names)
-- Reservation form with name input and time slot dropdown
+- Table with columns: Čas (Time), Volná místa (Available spots), Akce (Action button)
+- Lightbox modal with name input field (WCAG 2.2 AA compliant)
+- Screen reader accessible with focus trap and keyboard navigation
 
 ---
 
@@ -29,11 +30,15 @@ Renders the public reservation table and form.
 ### Configuration
 
 #### `rs_get_config(): array`
-Returns plugin configuration array.
+Returns plugin configuration array with defaults.
 
 ```php
 $config = rs_get_config();
-// Returns: ['reservations_enabled' => 0|1]
+// Returns: [
+//   'reservations_enabled' => 0|1,
+//   'closed_notice_text' => 'Rezervace jsou momentálně uzavřeny.',
+//   'hide_closed_notice' => 0|1
+// ]
 ```
 
 #### `rs_get_time_settings(): array`
@@ -47,7 +52,7 @@ $settings = rs_get_time_settings();
 ### Data Access
 
 #### `rs_load_data(): array`
-Loads all reservations and slot capacities from database.
+Loads all reservations and slot capacities from database (admin use).
 
 ```php
 $data = rs_load_data();
@@ -58,12 +63,33 @@ $data = rs_load_data();
 // ]
 ```
 
+#### `rs_load_public_data(): array`
+Loads reservation counts and capacities only (no names - for privacy).
+
+```php
+$data = rs_load_public_data();
+// Returns: [
+//   '09:00' => ['count' => 3, 'capacity' => 6],
+//   '09:15' => ['count' => 0, 'capacity' => 6],
+//   ...
+// ]
+```
+
 #### `rs_generate_times(): array`
 Generates array of time slot strings based on settings.
 
 ```php
 $times = rs_generate_times();
 // Returns: ['09:00', '09:15', '09:30', ...]
+```
+
+#### `rs_format_available_spots(int $count): string`
+Formats available spots with proper Czech grammar.
+
+```php
+rs_format_available_spots(1);  // Returns: '1 volné místo'
+rs_format_available_spots(3);  // Returns: '3 volná místa'
+rs_format_available_spots(5);  // Returns: '5 volných míst'
 ```
 
 ### Lifecycle
@@ -121,19 +147,44 @@ Processes time range configuration form.
 **Validates:**
 - Nonce (`rs_update_time_range_nonce` / `rs_update_time_range_action`)
 
+### Asset Enqueuing
+
+#### `rs_enqueue_frontend_assets(): void`
+Enqueues frontend CSS and JavaScript on pages with shortcode.
+
+**Hooked to:** `wp_enqueue_scripts`
+
+**Loads:**
+- `assets/css/frontend.css` (or `.min.css`)
+- `assets/js/frontend.js` (or `.min.js`)
+
+#### `rs_enqueue_admin_styles(string $hook): void`
+Enqueues admin CSS only on the plugin's admin page.
+
+**Hooked to:** `admin_enqueue_scripts`
+
+**Loads:**
+- `assets/css/admin.css` (or `.min.css`) when `$hook === 'toplevel_page_rs-admin'`
+
 ### Utility
 
-#### `rs_set_message(string $message, string $type): void`
+#### `rs_set_message(string $message, string $type, ?string $redirect_url = null): void`
 Sets flash message in session and redirects.
 
 ```php
 rs_set_message('Rezervace byla úspěšně provedena!', 'rs-message-success');
 rs_set_message('Chyba při ukládání.', 'rs-error');
+rs_set_message('Updated!', 'updated', admin_url('admin.php?page=rs-admin'));
 ```
 
+**Parameters:**
+- `$message` - The message text
+- `$type` - CSS class for styling
+- `$redirect_url` - Optional URL to redirect to (uses referer if null)
+
 **CSS classes used:**
-- `rs-message-success` - Success messages
-- `rs-error` - Error messages
+- `rs-message-success` - Success messages (frontend)
+- `rs-error` - Error messages (frontend)
 - `updated` - WordPress admin notices
 - `error` - WordPress admin errors
 
@@ -150,10 +201,15 @@ Generates and downloads Excel file with all reservations.
 
 | Hook | Callback | Priority | Description |
 |------|----------|----------|-------------|
-| `wp_enqueue_scripts` | `rs_enqueue_styles` | 10 | Load CSS on frontend |
-| `admin_enqueue_scripts` | `rs_enqueue_styles` | 10 | Load CSS in admin |
+| `wp_enqueue_scripts` | `rs_enqueue_frontend_assets` | 10 | Load CSS/JS on frontend |
+| `admin_enqueue_scripts` | `rs_enqueue_admin_styles` | 10 | Load CSS in admin |
 | `admin_menu` | `rs_admin_menu` | 10 | Register admin menu |
 | `admin_init` | `rs_update_time_range_settings` | 10 | Handle time settings |
+| `admin_init` | `rs_update_capacity_handler` | 10 | Handle capacity updates |
+| `admin_init` | `rs_delete_reservation_handler` | 10 | Delete single reservation |
+| `admin_init` | `rs_delete_all_reservations_in_time_handler` | 10 | Delete all for time |
+| `admin_init` | `rs_delete_all_reservations_handler` | 10 | Delete all reservations |
+| `admin_init` | `rs_reset_plugin_handler` | 10 | Reset plugin to defaults |
 | `admin_init` | `rs_update_plugin_settings` | 10 | Handle config settings |
 | `template_redirect` | `rs_handle_reservation_submission` | 10 | Process reservations |
 | `admin_post_update_time_range` | `rs_update_slots_after_time_change` | 10 | Sync slots |
@@ -174,7 +230,11 @@ register_activation_hook(__FILE__, 'rs_activate_plugin');
 | Public reservation | `rs_reservation_nonce` | `rs_reservation_action` |
 | Admin settings | `rs_update_settings_nonce` | `rs_update_settings_action` |
 | Time range settings | `rs_update_time_range_nonce` | `rs_update_time_range_action` |
+| Update capacity | `rs_update_capacity_nonce` | `rs_update_capacity_action` |
+| Delete reservation | `rs_delete_reservation_nonce` | `rs_delete_reservation_action` |
+| Delete all in time | `rs_delete_all_in_time_nonce` | `rs_delete_all_in_time_action` |
 | Delete all reservations | `delete_all_reservations_nonce` | `delete_all_reservations_action` |
+| Reset plugin | `rs_reset_plugin_nonce` | `rs_reset_plugin_action` |
 
 ---
 
@@ -185,7 +245,14 @@ register_activation_hook(__FILE__, 'rs_activate_plugin');
 | `rs_start_time` | string | `'09:00'` | First time slot |
 | `rs_end_time` | string | `'16:30'` | Last time slot |
 | `rs_time_interval` | int | `15` | Interval in minutes |
-| `rs_config` | array | `['reservations_enabled' => 0]` | Plugin configuration |
+| `rs_config` | array | See below | Plugin configuration |
+
+**`rs_config` structure:**
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `reservations_enabled` | int | `0` | Enable/disable reservations (0/1) |
+| `closed_notice_text` | string | `'Rezervace jsou momentálně uzavřeny.'` | Custom closed message |
+| `hide_closed_notice` | int | `0` | Hide closed message on frontend (0/1) |
 
 ---
 
@@ -209,32 +276,51 @@ add_menu_page(
 
 ## CSS Classes
 
-### Public Frontend
+### Public Frontend (`assets/css/frontend.css`)
 
 | Class | Element |
 |-------|---------|
 | `.rs-container` | Main wrapper |
-| `.rs-title` | Page title |
 | `.rs-table` | Reservation table |
-| `.rs-names-list` | Name list in table |
-| `.rs-name` | Individual name |
-| `.rs-no-reservations` | "No reservations" text |
-| `.rs-form` | Reservation form |
 | `.rs-input` | Text input |
-| `.rs-select` | Time dropdown |
-| `.rs-reserve-button` | Submit button |
+| `.rs-select` | Dropdown (legacy, not used in lightbox) |
+| `.rs-reserve-button` | Submit/reserve buttons |
+| `.rs-label` | Form label container |
 | `.rs-error` | Error message |
 | `.rs-message-success` | Success message |
+| `.rs-no-slots` | "All slots occupied" message |
+| `.sr-only` | Screen reader only (accessibility) |
 
-### Admin
+**Lightbox Modal:**
+
+| Class | Element |
+|-------|---------|
+| `.rs-lightbox-overlay` | Modal overlay background |
+| `.rs-lightbox` | Modal container |
+| `.rs-lightbox-close` | Close button (X) |
+| `.rs-lightbox-title` | Modal title |
+| `.rs-lightbox-time` | Time display in title |
+| `.rs-lightbox-form` | Form inside modal |
+| `.rs-lightbox-time-input` | Hidden time input |
+| `.rs-lightbox-buttons` | Button container |
+| `.rs-lightbox-cancel` | Cancel button |
+| `.rs-open-lightbox` | Trigger button (data-time attribute) |
+
+### Admin (`assets/css/admin.css`)
 
 | Class | Element |
 |-------|---------|
 | `.rs-admin-container` | Admin page wrapper |
 | `.rs-names-list-admin` | Admin name list |
+| `.rs-name` | Individual name item |
 | `.btn-delete` | Delete button |
 | `.big-btn-delete` | Large delete button |
 | `.rs-capacity-input` | Capacity number input |
 | `.rs-capacity-button` | Update capacity button |
 | `.rs-action-capacity` | Capacity form wrapper |
 | `.rs-action-delete-all` | Delete all wrapper |
+| `.time-row` | Time column styling |
+| `.rs-excel-label` | Excel export label |
+| `.rs-date` | Date input |
+| `.rs-date-div` | Date input container |
+| `.buttons-gap` | Button spacing container |

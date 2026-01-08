@@ -14,7 +14,7 @@ Single-file procedural WordPress plugin. All logic resides in `reservation-syste
 └────────┬─────────┴───────┬────────┴───────┬───────┴──────┬──────┘
          │                 │                │              │
 ┌────────▼─────────────────▼────────────────▼──────────────▼──────┐
-│                   reservation-system.php                    │
+│                   reservation-system.php                         │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
 │  │  Shortcode  │  │   Admin     │  │      Data Layer         │  │
@@ -28,11 +28,11 @@ Single-file procedural WordPress plugin. All logic resides in `reservation-syste
 │  │  (reservation submit, capacity update, settings, export)  │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
-         │
-┌────────▼────────┐
-│   PhpSpreadsheet │
-│   (Excel export) │
-└─────────────────┘
+         │                              │
+┌────────▼────────┐          ┌─────────▼─────────┐
+│   PhpSpreadsheet │          │  frontend.js      │
+│   (Excel export) │          │  (Lightbox modal) │
+└─────────────────┘          └───────────────────┘
 ```
 
 ## Data Flow
@@ -45,13 +45,21 @@ User visits page with [reservation_table]
          ▼
 rs_reservation_table_shortcode()
          │
-         ├── rs_load_data() ──────► {prefix}_reservations
-         │                          {prefix}_reservation_slots
-         ├── rs_generate_times() ──► Options: rs_start_time, rs_end_time, rs_time_interval
-         └── rs_get_config() ─────► Option: rs_config
+         ├── rs_load_public_data() ──► {prefix}_reservations (counts only)
+         │                             {prefix}_reservation_slots
+         ├── rs_generate_times() ────► Options: rs_start_time, rs_end_time, rs_time_interval
+         └── rs_get_config() ────────► Option: rs_config
          │
          ▼
-Renders HTML table + form
+Renders HTML table + lightbox modal
+(Booked slots hidden, available spots shown)
+         │
+         ▼
+User clicks "Rezervovat" button
+         │
+         ▼
+frontend.js opens lightbox modal
+(Focus trap, Escape key close, WCAG 2.2 AA)
          │
          ▼
 User submits form (POST)
@@ -71,7 +79,7 @@ rs_handle_reservation_submission()
 rs_set_message() ──► $_SESSION['flash_message']
          │
          ▼
-Redirect back (JavaScript)
+wp_safe_redirect() back to page
 ```
 
 ### Admin Flow
@@ -124,7 +132,16 @@ rs_export_reservations_to_excel()
 | `rs_start_time` | string | `"09:00"` | First time slot |
 | `rs_end_time` | string | `"16:30"` | Last time slot |
 | `rs_time_interval` | int | `15` | Minutes between slots |
-| `rs_config` | array | `['reservations_enabled' => 0]` | Feature flags |
+| `rs_config` | array | See below | Plugin configuration |
+
+**`rs_config` array structure:**
+```php
+[
+    'reservations_enabled' => 0,                              // 0=off, 1=on
+    'closed_notice_text' => 'Rezervace jsou momentálně uzavřeny.',  // Custom message
+    'hide_closed_notice' => 0                                 // 0=show, 1=hide
+]
+```
 
 ### Database State
 See [DATABASE.md](./DATABASE.md) for table schemas.
@@ -138,18 +155,38 @@ See [DATABASE.md](./DATABASE.md) for table schemas.
 | XSS | `esc_html()`, `esc_attr()`, `sanitize_text_field()` |
 | Authorization | `current_user_can('manage_options')` for admin actions |
 | Direct Access | `if (!defined('ABSPATH')) exit;` |
+| Privacy | Public view shows counts only (no names exposed) |
+
+## Accessibility (WCAG 2.2 AA)
+
+| Feature | Implementation |
+|---------|----------------|
+| Live regions | `role="status"` with `aria-live="polite"` for flash messages |
+| Modal dialog | `role="dialog"`, `aria-modal="true"`, `aria-labelledby` |
+| Focus management | Focus trap in lightbox, focus restoration on close |
+| Keyboard navigation | Escape key closes modal, Tab cycles within modal |
+| Screen reader text | `.sr-only` class for visually hidden labels |
+| Touch targets | Minimum 40px height on interactive elements |
+| Focus indicators | 2px outline with offset on focusable elements |
 
 ## File Dependencies
 
 ```
 reservation-system.php
          │
-         ├── assets/style.css (enqueued via wp_enqueue_style)
+         ├── assets/css/frontend.css (enqueued on pages with shortcode)
+         ├── assets/css/admin.css (enqueued on admin page only)
+         ├── assets/js/frontend.js (enqueued on pages with shortcode)
          │
          └── lib/vendor/autoload.php (loaded on-demand for Excel export)
                     │
                     └── phpoffice/phpspreadsheet
 ```
+
+**Asset loading logic:**
+- Frontend assets only load on pages containing `[reservation_table]` shortcode
+- Admin assets only load on the `toplevel_page_rs-admin` hook
+- Minified versions (`.min.css`, `.min.js`) used when `SCRIPT_DEBUG` is false
 
 ## Hook Registration Timeline
 
@@ -158,11 +195,17 @@ Plugin Load
     │
     ├── register_activation_hook ──► rs_activate_plugin (DB setup)
     │
-    ├── add_action('wp_enqueue_scripts') ──► rs_enqueue_styles
-    ├── add_action('admin_enqueue_scripts') ──► rs_enqueue_styles
+    ├── add_action('wp_enqueue_scripts') ──► rs_enqueue_frontend_assets
+    ├── add_action('admin_enqueue_scripts') ──► rs_enqueue_admin_styles
     │
     ├── add_action('admin_menu') ──► rs_admin_menu
+    │
     ├── add_action('admin_init') ──► rs_update_time_range_settings
+    ├── add_action('admin_init') ──► rs_update_capacity_handler
+    ├── add_action('admin_init') ──► rs_delete_reservation_handler
+    ├── add_action('admin_init') ──► rs_delete_all_reservations_in_time_handler
+    ├── add_action('admin_init') ──► rs_delete_all_reservations_handler
+    ├── add_action('admin_init') ──► rs_reset_plugin_handler
     ├── add_action('admin_init') ──► rs_update_plugin_settings
     │
     ├── add_action('template_redirect') ──► rs_handle_reservation_submission
