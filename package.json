@@ -1,6 +1,6 @@
 {
   "name": "reservation-system",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Zápisový Rezervační systém",
   "main": "reservation-system.php",
   "scripts": {

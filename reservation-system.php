@@ -2,14 +2,14 @@
 /*
 Plugin Name: Zápisový Rezervační systém
 Description: Plugin pro správu rezervací a zobrazení časových slotů pro uživatele.
-Version: 1.4.0
+Version: 1.4.1
 Author: Jan Veselský
 */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'RS_VERSION', '1.4.0' );
+define( 'RS_VERSION', '1.4.1' );
 
 ob_start();
 session_start();
@@ -222,8 +222,9 @@ function rs_reservation_table_shortcode() {
                         <input type="hidden" name="time" class="rs-lightbox-time-input" value="" />
                         <!-- WCAG 1.3.1, 2.4.6: Explicit label association with visible label -->
                         <label for="rs-reservation-name" class="rs-label">
-                            <span class="rs-label-text sr-only">Jméno a příjmení dítěte</span>
+                            <span class="rs-label-text">Jméno a příjmení dítěte <span class="rs-required" aria-hidden="true">*</span></span>
                             <input type="text" id="rs-reservation-name" name="name" class="rs-input" placeholder="Jméno a příjmení dítěte" required aria-required="true"/>
+                            <span class="rs-field-hint">Povinné pole</span>
                         </label>
                         <div class="rs-lightbox-buttons">
                             <button type="button" class="rs-lightbox-cancel">Zrušit</button>
@@ -252,6 +253,11 @@ function rs_handle_reservation_submission(): void {
 
 		$name = sanitize_text_field( $_POST['name'] );
 		$time = sanitize_text_field( $_POST['time'] );
+
+		// Validate required fields (server-side check - client-side can be bypassed)
+		if ( empty( $name ) ) {
+			rs_set_message( 'Jméno a příjmení dítěte je povinné pole.', 'rs-error', $redirect_url );
+		}
 
 		global $wpdb;
 		$reservations_table = $wpdb->prefix . 'reservations';
