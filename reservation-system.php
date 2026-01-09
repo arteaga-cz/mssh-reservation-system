@@ -2,14 +2,14 @@
 /*
 Plugin Name: Zápisový Rezervační systém
 Description: Plugin pro správu rezervací a zobrazení časových slotů pro uživatele.
-Version: 1.4.1
+Version: 1.5.0
 Author: Jan Veselský
 */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'RS_VERSION', '1.4.1' );
+define( 'RS_VERSION', '1.5.0' );
 
 ob_start();
 session_start();
@@ -727,15 +727,16 @@ function rs_ajax_submit_reservation(): void {
 		] );
 	}
 
-	// Check duplicate name
+	// Check duplicate name for this time slot
 	$exists = $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(*) FROM $reservations_table WHERE name = %s",
-		$name
+		"SELECT COUNT(*) FROM $reservations_table WHERE name = %s AND time = %s",
+		$name,
+		$time
 	) );
 
 	if ( $exists > 0 ) {
 		wp_send_json_error( [
-			'message'   => 'Rezervace pro toto jméno již existuje. V případě shody jmen napište za jméno dítěte do závorek jméno rodiče. Pokud jste jméno nezadávali vy, obraťte se na školku.',
+			'message'   => 'Rezervace pro toto jméno v daném čase již existuje. Pokud chcete rezervovat jiný čas, vyberte jej z dostupných slotů.',
 			'new_nonce' => wp_create_nonce( 'rs_reservation_action' ),
 		] );
 	}
