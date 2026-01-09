@@ -2,18 +2,28 @@
 /*
 Plugin Name: Zápisový Rezervační systém
 Description: Plugin pro správu rezervací a zobrazení časových slotů pro uživatele.
-Version: 1.6.0
+Version: 1.6.1
 Author: Jan Veselský
 */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'RS_VERSION', '1.6.0' );
+define( 'RS_VERSION', '1.6.1' );
 
 ob_start();
 session_start();
 register_activation_hook( __FILE__, 'rs_activate_plugin' );
+
+/**
+ * Check if current user can manage reservations.
+ * Allows administrators and editors.
+ *
+ * @return bool
+ */
+function rs_current_user_can_manage(): bool {
+	return current_user_can( 'administrator' ) || current_user_can( 'editor' );
+}
 
 function rs_enqueue_frontend_assets(): void {
 	global $post;
@@ -231,14 +241,14 @@ function rs_reservation_table_shortcode() {
 add_shortcode( 'reservation_table', 'rs_reservation_table_shortcode' );
 
 function rs_admin_menu(): void {
-	add_menu_page( 'Rezervace', 'Rezervace', 'editor', 'rs-admin', 'rs_admin_page', 'dashicons-calendar-alt' );
+	add_menu_page( 'Rezervace', 'Rezervace', 'edit_published_posts', 'rs-admin', 'rs_admin_page', 'dashicons-calendar-alt' );
 }
 
 add_action( 'admin_menu', 'rs_admin_menu' );
 
 
 function rs_reset_plugin(): void {
-	if ( ! current_user_can( 'editor' ) ) {
+	if ( ! rs_current_user_can_manage() ) {
 		return;
 	}
 
@@ -273,7 +283,7 @@ function rs_admin_reset_button(): void {
 }
 
 function rs_update_time_range_settings(): void {
-	if ( ! current_user_can( 'editor' ) ) {
+	if ( ! rs_current_user_can_manage() ) {
 		return;
 	}
 	if (isset($_POST['update_time_range']) && isset($_POST['rs_update_time_range_nonce']) && wp_verify_nonce($_POST['rs_update_time_range_nonce'], 'rs_update_time_range_action')) {
@@ -293,7 +303,7 @@ function rs_update_time_range_settings(): void {
 add_action('admin_init', 'rs_update_time_range_settings');
 
 function rs_update_capacity_handler(): void {
-	if ( ! current_user_can( 'editor' ) ) {
+	if ( ! rs_current_user_can_manage() ) {
 		return;
 	}
 	if ( isset( $_POST['update_capacity'] )
@@ -326,7 +336,7 @@ function rs_update_capacity_handler(): void {
 add_action( 'admin_init', 'rs_update_capacity_handler' );
 
 function rs_delete_reservation_handler(): void {
-	if ( ! current_user_can( 'editor' ) ) {
+	if ( ! rs_current_user_can_manage() ) {
 		return;
 	}
 	if ( isset( $_POST['delete_reservation'] )
@@ -353,7 +363,7 @@ function rs_delete_reservation_handler(): void {
 add_action( 'admin_init', 'rs_delete_reservation_handler' );
 
 function rs_delete_all_reservations_in_time_handler(): void {
-	if ( ! current_user_can( 'editor' ) ) {
+	if ( ! rs_current_user_can_manage() ) {
 		return;
 	}
 	if ( isset( $_POST['delete_all_reservations_in_time'] )
@@ -370,7 +380,7 @@ function rs_delete_all_reservations_in_time_handler(): void {
 add_action( 'admin_init', 'rs_delete_all_reservations_in_time_handler' );
 
 function rs_delete_all_reservations_handler(): void {
-	if ( ! current_user_can( 'editor' ) ) {
+	if ( ! rs_current_user_can_manage() ) {
 		return;
 	}
 	if ( isset( $_POST['delete_all_reservations'] )
@@ -386,7 +396,7 @@ function rs_delete_all_reservations_handler(): void {
 add_action( 'admin_init', 'rs_delete_all_reservations_handler' );
 
 function rs_reset_plugin_handler(): void {
-	if ( ! current_user_can( 'editor' ) ) {
+	if ( ! rs_current_user_can_manage() ) {
 		return;
 	}
 	if ( isset( $_POST['reset_plugin'] )
@@ -398,7 +408,7 @@ function rs_reset_plugin_handler(): void {
 add_action( 'admin_init', 'rs_reset_plugin_handler' );
 
 function rs_admin_page(): void {
-	if ( ! current_user_can( 'editor' ) ) {
+	if ( ! rs_current_user_can_manage() ) {
 		return;
 	}
 	global $wpdb;
@@ -568,7 +578,7 @@ function rs_admin_page(): void {
 
 
 function rs_update_plugin_settings(): void {
-	if ( ! current_user_can( 'editor' ) ) {
+	if ( ! rs_current_user_can_manage() ) {
 		return;
 	}
 	if ( isset( $_POST['update_config'] ) && isset( $_POST['rs_update_settings_nonce'] ) && wp_verify_nonce( $_POST['rs_update_settings_nonce'], 'rs_update_settings_action' ) ) {
@@ -822,6 +832,9 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
  * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
  */
 function rs_export_reservations_to_excel(): void {
+	if ( ! rs_current_user_can_manage() ) {
+		wp_die( 'Nedostatečná oprávnění.' );
+	}
 	if (isset($_POST['export_to_excel'])) {
 		global $wpdb;
 		$reservations_table = $wpdb->prefix . 'reservations';

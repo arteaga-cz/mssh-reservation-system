@@ -168,7 +168,7 @@ See [DATABASE.md](./DATABASE.md) for table schemas.
 | CSRF | WordPress nonces on all forms |
 | SQL Injection | `$wpdb->prepare()` for all queries |
 | XSS | `esc_html()`, `esc_attr()`, `sanitize_text_field()` |
-| Authorization | `current_user_can('editor')` for admin actions |
+| Authorization | `rs_current_user_can_manage()` helper allows administrators and editors |
 | Direct Access | `if (!defined('ABSPATH')) exit;` |
 | Privacy | Public view shows counts only (no names exposed) |
 
