@@ -2,14 +2,14 @@
 /*
 Plugin Name: Zápisový Rezervační systém
 Description: Plugin pro správu rezervací a zobrazení časových slotů pro uživatele.
-Version: 1.5.0
+Version: 1.6.0
 Author: Jan Veselský
 */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'RS_VERSION', '1.5.0' );
+define( 'RS_VERSION', '1.6.0' );
 
 ob_start();
 session_start();
@@ -231,14 +231,14 @@ function rs_reservation_table_shortcode() {
 add_shortcode( 'reservation_table', 'rs_reservation_table_shortcode' );
 
 function rs_admin_menu(): void {
-	add_menu_page( 'Rezervace', 'Rezervace', 'manage_options', 'rs-admin', 'rs_admin_page', 'dashicons-calendar-alt' );
+	add_menu_page( 'Rezervace', 'Rezervace', 'editor', 'rs-admin', 'rs_admin_page', 'dashicons-calendar-alt' );
 }
 
 add_action( 'admin_menu', 'rs_admin_menu' );
 
 
 function rs_reset_plugin(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! current_user_can( 'editor' ) ) {
 		return;
 	}
 
@@ -273,7 +273,7 @@ function rs_admin_reset_button(): void {
 }
 
 function rs_update_time_range_settings(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! current_user_can( 'editor' ) ) {
 		return;
 	}
 	if (isset($_POST['update_time_range']) && isset($_POST['rs_update_time_range_nonce']) && wp_verify_nonce($_POST['rs_update_time_range_nonce'], 'rs_update_time_range_action')) {
@@ -293,7 +293,7 @@ function rs_update_time_range_settings(): void {
 add_action('admin_init', 'rs_update_time_range_settings');
 
 function rs_update_capacity_handler(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! current_user_can( 'editor' ) ) {
 		return;
 	}
 	if ( isset( $_POST['update_capacity'] )
@@ -326,7 +326,7 @@ function rs_update_capacity_handler(): void {
 add_action( 'admin_init', 'rs_update_capacity_handler' );
 
 function rs_delete_reservation_handler(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! current_user_can( 'editor' ) ) {
 		return;
 	}
 	if ( isset( $_POST['delete_reservation'] )
@@ -353,7 +353,7 @@ function rs_delete_reservation_handler(): void {
 add_action( 'admin_init', 'rs_delete_reservation_handler' );
 
 function rs_delete_all_reservations_in_time_handler(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! current_user_can( 'editor' ) ) {
 		return;
 	}
 	if ( isset( $_POST['delete_all_reservations_in_time'] )
@@ -370,7 +370,7 @@ function rs_delete_all_reservations_in_time_handler(): void {
 add_action( 'admin_init', 'rs_delete_all_reservations_in_time_handler' );
 
 function rs_delete_all_reservations_handler(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! current_user_can( 'editor' ) ) {
 		return;
 	}
 	if ( isset( $_POST['delete_all_reservations'] )
@@ -386,7 +386,7 @@ function rs_delete_all_reservations_handler(): void {
 add_action( 'admin_init', 'rs_delete_all_reservations_handler' );
 
 function rs_reset_plugin_handler(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! current_user_can( 'editor' ) ) {
 		return;
 	}
 	if ( isset( $_POST['reset_plugin'] )
@@ -398,7 +398,7 @@ function rs_reset_plugin_handler(): void {
 add_action( 'admin_init', 'rs_reset_plugin_handler' );
 
 function rs_admin_page(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! current_user_can( 'editor' ) ) {
 		return;
 	}
 	global $wpdb;
@@ -568,7 +568,7 @@ function rs_admin_page(): void {
 
 
 function rs_update_plugin_settings(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! current_user_can( 'editor' ) ) {
 		return;
 	}
 	if ( isset( $_POST['update_config'] ) && isset( $_POST['rs_update_settings_nonce'] ) && wp_verify_nonce( $_POST['rs_update_settings_nonce'], 'rs_update_settings_action' ) ) {
